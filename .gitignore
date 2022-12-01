@@ -1,2 +1,6 @@
 # Sample content
 samples/
+
+# .NET builds
+obj/
+bin/

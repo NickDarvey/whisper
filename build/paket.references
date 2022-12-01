@@ -1,0 +1,4 @@
+FSharp.Core
+Fake.Core.Target
+Fake.DotNet.Cli
+MAB.DotIgnore

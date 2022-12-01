@@ -3,11 +3,13 @@ root = true
 
 indent_style = space
 indent_size = 2
-max_line_length = 120
+max_line_length = 80
 insert_final_newline = true
 trim_trailing_whitespace = true
 
 [*.fs]
+indent_size = 2
+max_line_length = 80
 fsharp_space_before_uppercase_invocation=true
 fsharp_space_before_member=true
 fsharp_space_before_colon=true
