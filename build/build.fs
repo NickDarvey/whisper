@@ -5,14 +5,8 @@ open Fake.IO
 open Fake.IO.FileSystemOperators
 open Fake.IO.Globbing.Operators
 open Fake.Core.TargetOperators
+open Fake.Tools.Git
 open MAB.DotIgnore
-
-module Exit =
-  let (|Code|_|) code (result : ProcessResult) =
-    if result.ExitCode = code then Some result else None
-
-  let (|OK|_|) (result : ProcessResult) =
-    if result.OK then Some result else None
 
 module Path =
   let root = __SOURCE_DIRECTORY__ </> ".."
@@ -25,17 +19,21 @@ module Format =
     let private sources =
       !!(Path.root </> "**/*.fs")
       |> Seq.filter (fun s -> not <| Path.ignored.IsIgnored (s, false))
+      |> Seq.toList
 
-    let check _ =
-      sources
+    let check files =
+      defaultArg files sources
       |> String.concat " "
       |> sprintf "%s --check"
       |> fantomas
       |> function
         | Exit.Code 0 _ -> Trace.log "No fsharp files need formatting."
         | Exit.Code 99 _ ->
-          Trace.traceError "Some fsharp files need formatting."
-        | _ -> Trace.traceError "Error while formatting fsharp files."
+          Trace.log
+            "==> Run `./build Format.FSharp.format` to apply formatting."
+
+          raise <| exn "Some fsharp files need formatting."
+        | _ -> raise <| exn "Error while formatting fsharp files."
 
     let format _ =
       sources
@@ -43,13 +41,19 @@ module Format =
       |> fantomas
       |> function
         | Exit.OK _ -> ()
-        | _ -> Trace.traceError "Error while formatting fsharp files."
+        | _ -> raise <| exn "Error while formatting fsharp files."
+
 
 module Target =
 
   let init () =
     Target.initEnvironment ()
-    Target.create "Format.FSharp.check" Format.FSharp.check
+
+    Target.create "Format.FSharp.check" (fun p ->
+      match p.Context.Arguments with
+      | [] -> Format.FSharp.check None
+      | files -> Format.FSharp.check (Some files))
+
     Target.create "Format.FSharp.format" Format.FSharp.format
 
 [<EntryPoint>]
@@ -61,6 +65,7 @@ let main argv =
   |> Context.setExecutionContext
 
   Target.init ()
-  Target.runOrDefaultWithArguments "Format.FSharp.check"
+  let ctx = Target.WithContext.runOrDefaultWithArguments "Format.FSharp.check"
+  Target.updateBuildStatus ctx
 
-  0 // return an integer exit code
+  if Target.isFailed ctx then 1 else 0

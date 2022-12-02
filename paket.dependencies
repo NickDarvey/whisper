@@ -5,4 +5,5 @@ framework: auto-detect
 nuget FSharp.Core ~> 7
 nuget Fake.Core.Target ~> 6 prerelease
 nuget Fake.DotNet.Cli ~> 6 prerelease
+nuget Fake.Tools.Git ~> 6 prerelease
 nuget MAB.DotIgnore
