@@ -8,9 +8,12 @@ open Fake.Core.TargetOperators
 open Fake.Tools.Git
 open MAB.DotIgnore
 
-module Path =
+module private Path =
   let root = __SOURCE_DIRECTORY__ </> ".."
   let ignored = IgnoreList (root </> ".gitignore")
+
+module private DotNet =
+  let install = lazy DotNet.install DotNet.Versions.FromGlobalJson
 
 module Format =
   module FSharp =
@@ -43,6 +46,13 @@ module Format =
         | Exit.OK _ -> ()
         | _ -> raise <| exn "Error while formatting fsharp files."
 
+module Restore =
+  module DotNet =
+    let restore _ =
+      Paket.restore (fun p ->
+        { p with
+            ToolType = ToolType.CreateLocalTool DotNet.install.Value
+        })
 
 module Target =
 
@@ -56,6 +66,8 @@ module Target =
 
     Target.create "Format.FSharp.format" Format.FSharp.format
 
+    Target.create "Restore.DotNet.restore" Restore.DotNet.restore
+
 [<EntryPoint>]
 let main argv =
   argv
@@ -67,5 +79,4 @@ let main argv =
   Target.init ()
   let ctx = Target.WithContext.runOrDefaultWithArguments "Format.FSharp.check"
   Target.updateBuildStatus ctx
-
   if Target.isFailed ctx then 1 else 0

@@ -1,5 +1,6 @@
 FSharp.Core
 Fake.Core.Target
 Fake.DotNet.Cli
+Fake.DotNet.Paket
 Fake.Tools.Git
 MAB.DotIgnore
