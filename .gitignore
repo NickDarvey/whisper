@@ -4,3 +4,6 @@ samples/
 # .NET builds
 obj/
 bin/
+
+# Paket
+paket-files/

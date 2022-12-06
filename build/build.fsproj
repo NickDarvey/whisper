@@ -6,8 +6,10 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Fake/Fake.Core.fs" />
-    <Compile Include="Fake/Fake.Tools.Git.fs" />
+    <Compile Include="ext/Common.fs" />
+    <Compile Include="ext/Fake/Build.CMake.fs" />
+    <Compile Include="ext/Fake/Core.fs" />
+    <Compile Include="ext/Fake/Tools.Git.fs" />
     <Compile Include="build.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

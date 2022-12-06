@@ -3,8 +3,12 @@ source https://api.nuget.org/v3/index.json
 storage: none
 framework: auto-detect
 nuget FSharp.Core ~> 7
+nuget Fake.Build.CMake ~> 6 prerelease
 nuget Fake.Core.Target ~> 6 prerelease
 nuget Fake.DotNet.Cli ~> 6 prerelease
 nuget Fake.DotNet.Paket ~> 6 prerelease
 nuget Fake.Tools.Git ~> 6 prerelease
+nuget FsToolkit.ErrorHandling
 nuget MAB.DotIgnore
+http https://github.com/Kitware/CMake/releases/download/v3.25.1/cmake-3.25.1-windows-x86_64.zip
+http https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-win.zip
