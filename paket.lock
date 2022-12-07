@@ -221,3 +221,5 @@ HTTP
   remote: https://github.com
     cmake-3.25.1-windows-x86_64.zip (/Kitware/CMake/releases/download/v3.25.1/cmake-3.25.1-windows-x86_64.zip)
     ninja-win.zip (/ninja-build/ninja/releases/download/v1.11.1/ninja-win.zip)
+  remote: http://prdownloads.sourceforge.net
+    swigwin-4.1.1.zip (/swig/swigwin-4.1.1.zip)

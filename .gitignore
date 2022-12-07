@@ -1,6 +1,9 @@
 # Sample content
 samples/
 
+# Build artifacts
+out/
+
 # .NET builds
 obj/
 bin/

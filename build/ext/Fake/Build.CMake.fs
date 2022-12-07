@@ -42,13 +42,14 @@ let private CallCMake toolPath binaryDir args timeout =
     else
       args
 
-  let fullCommand = cmakeExe + " " + arguments
-  use __ = Trace.traceTask "CMake" fullCommand
+  // let fullCommand = cmakeExe + " " + arguments
+  // use __ = Trace.traceTask "CMake" fullCommand
 
   let result =
     CreateProcess.fromRawCommandLine cmakeExe arguments
     |> CreateProcess.withWorkingDirectory binaryDir
     |> CreateProcess.withTimeout (timeout)
+    |> CreateProcess.redirectOutput
 
   result
 

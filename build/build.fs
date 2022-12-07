@@ -85,8 +85,58 @@ module private Msvc =
     |> Proc.run
     |> fun x -> x.Result
 
+module private Swig =
+  let exe =
+    lazy
+      (let binary =
+        match Runtime.Host.OS with
+        | Runtime.Windows -> "swigwin-*/swig.exe"
+
+       Paket.files </> "**" </> binary
+       |> GlobbingPattern.create
+       |> Seq.exactlyOne)
+
+  type LanguageOptions = | CSharp of {| DllImport : string |}
+
+  type InputOptions = | InputFiles of string list
+
+  type GeneralOptions = {
+    /// Language-specific options
+    Language : LanguageOptions
+    /// Enable C++ processing
+    EnableCppProcessing : bool
+    /// Path for the output (wrapper) file
+    OutputFile : string
+    /// Path for language-specific files
+    OutputDirectory : string
+    /// Path(s) for input file(s)
+    Input : InputOptions
+  }
+
+  let private args opts =
+    let args =
+      Arguments.Empty
+      |> Arguments.appendIf opts.EnableCppProcessing "-c++"
+      |> Arguments.append [ "-o" ; opts.OutputFile ]
+      |> Arguments.append [ "-outdir" ; opts.OutputDirectory ]
+
+    let args =
+      match opts.Language with
+      | CSharp opts ->
+        args
+        |> Arguments.append [ "-csharp" ]
+        |> Arguments.append [ "-dllimport" ; opts.DllImport ]
+
+    let args =
+      match opts.Input with
+      | InputFiles files -> args |> Arguments.append files
+
+    Arguments.toList args
+
+  let run opts =
+    args opts |> CreateProcess.fromRawCommand exe.Value
+
 module private CMake =
-  open Fake.Build
 
   let exe =
     lazy
@@ -99,89 +149,148 @@ module private CMake =
        |> GlobbingPattern.create
        |> Seq.exactlyOne)
 
-  let source = Path.root </> "ext" </> "whisper.cpp"
+module private Projects =
+  module src =
+    module dotnet =
+      let path = Path.root </> "src" </> "dotnet"
+      /// The name for the generated wrapper file.
+      let wrapperFileName = "Whisper.g.cxx"
+      /// The name for the library
+      let libraryFileName = "whisper"
 
-  let private getToolchain (targetPlatform : Runtime.Platform) =
-    match Runtime.Host, targetPlatform with
-    | { OS = Runtime.Windows }, { OS = Runtime.Windows } ->
-      let env =
-        Msvc.vcvars Runtime.Host.Architecture targetPlatform.Architecture
+      let generate () =
 
-      {|
-        Env = EnvMap.ofMap env
-        Bin = source </> "build" </> Runtime.Platform.toString targetPlatform
-      |}
+        File.deleteAll (!!(path </> "**/*.g.*"))
 
-  let generate (targetPlatform : Runtime.Platform) =
-    let toolchain = getToolchain targetPlatform
+        let files = IO.Directory.CreateTempSubdirectory ()
 
-    CMake.generate (fun p ->
+        Swig.run
+          {
+            Language = Swig.CSharp {| DllImport = "test" |}
+            EnableCppProcessing = true
+            OutputFile = path </> wrapperFileName
+            OutputDirectory = files.FullName
+            Input = Swig.InputFiles [ path </> "whisper.i" ]
+          }
+        |> CreateProcess.ensureExitCode
+        |> Proc.run
+        |> ignore
 
-      let args = [
-        $"-DCMAKE_MAKE_PROGRAM={Ninja.exe.Value}"
-        $"-B{toolchain.Bin}"
-      ]
+        for file in files.EnumerateFiles () do
+          let target =
+            file.FullName
+            |> Path.toRelativeFrom files.FullName
+            |> Path.changeExtension $".g{file.Extension}"
+            |> Path.combine path
 
-      { p with
-          ToolPath = exe.Value
-          SourceDirectory = source
-          Generator = "Ninja Multi-Config"
-          AdditionalArgs = String.concat " " args
-      })
-    |> CreateProcess.withEnvironmentMap toolchain.Env
-    |> CreateProcess.ensureExitCode
-    |> Proc.run
-    |> ignore
+          file.MoveTo target
 
-  let build (targetPlatform : Runtime.Platform) =
-    let toolchain = getToolchain targetPlatform
+        files.Delete true
 
-    CMake.build (fun p ->
-      { p with
-          ToolPath = exe.Value
-          BinaryDirectory = toolchain.Bin
-      })
-    |> CreateProcess.withEnvironmentMap toolchain.Env
-    |> CreateProcess.ensureExitCode
-    |> Proc.run
-    |> ignore
+      let clean () =
+        File.deleteAll (GlobbingPattern.create (path </> "**/*.g.*"))
 
-module Fantomas =
-  let private fantomas = DotNet.exec id "fantomas"
 
-  let private sources =
-    !!(Path.root </> "**/*.fs")
-    |> Seq.filter (fun s -> not <| Path.ignored.IsIgnored (s, false))
-    |> Seq.toList
+module private Subjects =
+  module fsharp =
+    let private fantomas = DotNet.exec id "fantomas"
 
-  let check files =
-    defaultArg files sources
-    |> String.concat " "
-    |> sprintf "%s --check"
-    |> fantomas
-    |> function
-      | Exit.Code 0 _ -> Trace.log "No fsharp files need formatting."
-      | Exit.Code 99 _ ->
-        Trace.log "==> Run `./build Format.FSharp.format` to apply formatting."
+    let private sources =
+      !!(Path.root </> "**/*.fs")
+      |> Seq.filter (fun s -> not <| Path.ignored.IsIgnored (s, false))
+      |> Seq.toList
 
-        raise <| exn "Some fsharp files need formatting."
-      | _ -> raise <| exn "Error while formatting fsharp files."
+    let check files =
+      defaultArg files sources
+      |> String.concat " "
+      |> sprintf "%s --check"
+      |> fantomas
+      |> function
+        | Exit.Code 0 _ -> Trace.log "No fsharp files need formatting."
+        | Exit.Code 99 _ ->
+          Trace.log "==> Run `build fsharp:format` to apply formatting."
 
-  let format () =
-    sources
-    |> String.concat " "
-    |> fantomas
-    |> function
-      | Exit.OK _ -> ()
-      | _ -> raise <| exn "Error while formatting fsharp files."
+          Target.fail "Some fsharp files need formatting."
+        | _ -> raise <| exn "Error while formatting fsharp files."
+
+    let format () =
+      sources
+      |> String.concat " "
+      |> fantomas
+      |> function
+        | Exit.OK _ -> ()
+        | _ -> raise <| exn "Error while formatting fsharp files."
+
+
+  module cpp =
+    open Fake.Build
+
+    let source = Path.root
+    let out = source </> "out"
+
+    let private getToolchain (targetPlatform : Runtime.Platform) =
+      match Runtime.Host, targetPlatform with
+      | { OS = Runtime.Windows }, { OS = Runtime.Windows } ->
+        let env =
+          Msvc.vcvars Runtime.Host.Architecture targetPlatform.Architecture
+
+        {|
+          Env = EnvMap.ofMap env
+          Bin = out </> Runtime.Platform.toString targetPlatform
+        |}
+
+    let configure (targetPlatform : Runtime.Platform) =
+      let toolchain = getToolchain targetPlatform
+
+      CMake.generate (fun p ->
+
+        let args = [
+          $"-B{toolchain.Bin}"
+          $"-DCMAKE_MAKE_PROGRAM={Ninja.exe.Value}"
+          $"-DSWIG_EXECUTABLE={Swig.exe.Value}"
+          $"-DSRC_DOTNET_WRAPPER_FILE_NAME={Projects.src.dotnet.wrapperFileName}"
+          $"-DSRC_DOTNET_LIBRARY_FILE_NAME={Projects.src.dotnet.libraryFileName}"
+        ]
+
+        { p with
+            ToolPath = CMake.exe.Value
+            SourceDirectory = source
+            Generator = "Ninja Multi-Config"
+            AdditionalArgs = String.concat " " args
+        })
+      |> CreateProcess.withEnvironmentMap toolchain.Env
+      |> CreateProcess.ensureExitCode
+      |> Proc.run
+      |> ignore
+
+    let build (targetPlatform : Runtime.Platform) =
+      let toolchain = getToolchain targetPlatform
+
+      CMake.build (fun p ->
+        { p with
+            ToolPath = CMake.exe.Value
+            BinaryDirectory = toolchain.Bin
+        })
+      |> CreateProcess.withEnvironmentMap toolchain.Env
+      |> CreateProcess.ensureExitCode
+      |> Proc.run
+      |> ignore
+
+    let clean () = Directory.delete out
+
+
 
 module Target =
   open FsToolkit.ErrorHandling
 
-  module private Cpp =
-    let parseArgs (doc : Docopt.Doc) (args : string list) =
+  module private cpp =
+    let parseArgs (p : TargetParameter) =
+      let doc =
+        Docopt.create
+          $"""usage: %s{p.TargetInfo.Name} [--platform=<platform>]..."""
+
       let parameters = validation {
-        let! args = doc.TryParse args
+        let! args = doc.TryParse p.Context.Arguments
 
         let! platforms =
           args
@@ -205,40 +314,45 @@ module Target =
         "Invalid arguments: " + String.concat "; " e |> Target.fail
 
 
-  // Target names like {Phase}.{Subject}[.{action}]
+  // Target names like {subject}:{action}
   let init () =
     Target.initEnvironment ()
 
-    Target.create "Tool.FSharp.check" (fun p ->
+    Target.create "fsharp:check" (fun p ->
       match p.Context.Arguments with
-      | [] -> Fantomas.check None
-      | files -> Fantomas.check (Some files))
+      | [] -> Subjects.fsharp.check None
+      | files -> Subjects.fsharp.check (Some files))
 
-    Target.create "Tool.FSharp.format" (fun _ -> Fantomas.format ())
+    Target.create "fsharp:format" (fun _ -> Subjects.fsharp.format ())
 
-    Target.create "Restore.Cpp" (fun p ->
-      let doc =
-        Docopt.create
-          """usage: Restore.Cpp.restore [--platform=<platform>]..."""
+    Target.create "cpp:clean" (fun p -> Subjects.cpp.clean ())
 
-      let parameters = Cpp.parseArgs doc p.Context.Arguments
+    Target.create "cpp:configure" (fun p ->
+      let parameters = cpp.parseArgs p
 
       for platform in parameters.Platforms do
-        CMake.generate platform)
+        Subjects.cpp.configure platform)
 
-    Target.create "Build.Cpp" (fun p ->
-      let doc =
-        Docopt.create """usage: Build.Cpp.build [--platform=<platform>]..."""
-
-      let parameters = Cpp.parseArgs doc p.Context.Arguments
+    Target.create "cpp:build" (fun p ->
+      let parameters = cpp.parseArgs p
 
       for platform in parameters.Platforms do
-        CMake.build platform)
+        Subjects.cpp.build platform)
 
-    Target.create "Restore.DotNet" (fun _ -> Paket.restore ())
+    Target.create "src/dotnet:clean" (fun p -> Projects.src.dotnet.clean ())
 
-    "Restore.Cpp" ==> "Build.Cpp"
+    Target.create "src/dotnet:generate" (fun p ->
+      Projects.src.dotnet.generate ())
 
+    Target.create "clean" ignore
+    Target.create "restore" ignore
+    Target.create "build" ignore
+
+    "clean" <== [ "src/dotnet:clean" ; "cpp:clean" ]
+    "restore" <== [ "cpp:configure" ; "src/dotnet:generate" ]
+    "build" <== [ "cpp:build" ]
+
+    "clean" ?=> "restore" ==> "build"
 
 
 
@@ -250,8 +364,6 @@ let main argv =
   |> Context.RuntimeContext.Fake
   |> Context.setExecutionContext
 
-
-  // failwith MSBuild.msBuildExe
   let _ = Target.init ()
   let ctx = Target.WithContext.runOrDefaultWithArguments "Build.Cpp"
   Target.updateBuildStatus ctx
