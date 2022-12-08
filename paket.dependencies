@@ -2,6 +2,7 @@ source https://api.nuget.org/v3/index.json
 
 storage: none
 framework: auto-detect
+nuget Argu
 nuget FSharp.Core ~> 7
 nuget Fake.Build.CMake ~> 6 prerelease
 nuget Fake.Core.Target ~> 6 prerelease

@@ -6,4 +6,4 @@ project(Whisper VERSION 1.0 LANGUAGES CXX)
 set(BUILD_SHARED_LIBS OFF)
 
 add_subdirectory(ext/whisper.cpp)
-add_subdirectory(src/dotnet)
+add_subdirectory(src/dotnet/runtime)

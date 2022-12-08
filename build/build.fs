@@ -8,190 +8,248 @@ open Fake.Core.TargetOperators
 open Fake.Tools.Git
 open MAB.DotIgnore
 
-module private Path =
-  let root = __SOURCE_DIRECTORY__ </> ".."
-  let ignored = IgnoreList (root </> ".gitignore")
+/// The definition of this solution.
+[<AutoOpen>]
+module private Solution =
+  type Configuration =
+    | Debug
+    | Release
 
-module private DotNet =
-  let install = lazy DotNet.install DotNet.Versions.FromGlobalJson
+  module Configuration =
+    /// All supported configurations for this solution.
+    let all = Set [ Debug ; Release ]
 
-module private Paket =
-  let files = Path.root </> "paket-files"
+    let toString =
+      function
+      | Debug -> "Debug"
+      | Release -> "Release"
 
-  let restore () =
-    Paket.restore (fun p ->
-      { p with
-          ToolType = ToolType.CreateLocalTool DotNet.install.Value
-      })
+    let tryParse =
+      function
+      | "Debug" -> Some Debug
+      | "Release" -> Some Release
+      | _ -> None
 
-module private Ninja =
-  let exe =
-    lazy
-      (let binary =
-        match Runtime.Host.OS with
-        | Runtime.Windows -> "ninja.exe"
+  type OS = | Windows
 
-       Paket.files </> "**" </> binary
-       |> GlobbingPattern.create
-       |> Seq.exactlyOne)
+  module OS =
+    let toString (os : OS) =
+      match os with
+      | Windows -> "windows"
 
-module private Msvc =
-  open BlackFox.VsWhere
+    let tryParse =
+      function
+      | "windows" -> Some Windows
+      | _ -> None
 
-  /// The requested version of MSVC
-  [<Literal>]
-  let Version = "14.34"
+  type Architecture =
+    | X64
+    | X86
 
-  /// Gets the MSVC environment variables from [vcvarsall.bat](https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170#developer_command_file_locations).
-  let vcvars hostArchitecture targetArchitecture =
+  module Architecture =
+    let toString (architecture : Architecture) =
+      match architecture with
+      | X64 -> "x64"
+      | X86 -> "x86"
 
-    // https://devblogs.microsoft.com/cppblog/finding-the-visual-c-compiler-tools-in-visual-studio-2017/#c-installation-workloads-and-components
-    let components = "Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
+    let tryParse =
+      function
+      | "x64" -> Some X64
+      | "x86" -> Some X86
+      | _ -> None
 
-    let vsvars =
-      VsInstances.getWithPackage components false
-      |> List.sortByDescending (fun i -> i.InstallationVersion)
-      |> List.tryHead
-      |> function
-        | Some i ->
-          Path.combine i.InstallationPath "VC/Auxiliary/Build/vcvarsall.bat"
-        | None -> invalidOp $"MSVC installation could not be found"
-
-    /// Determines the 'arch' argument for vsvarsall from a host and target architecture.
-    let arch host target =
-      match host, target with
-      | Runtime.X64, Runtime.X64 -> "amd64"
-      | Runtime.X64, Runtime.X86 -> "amd64_x86"
-      | Runtime.X86, Runtime.X86 -> "x86"
-      | Runtime.X86, Runtime.X64 -> "x86_amd64"
-
-    let parse (r : ProcessOutput) : Map<string, string> =
-      r.Output
-      |> String.splitStr Environment.NewLine
-      |> List.skipWhile (fun line ->
-        not <| line.StartsWith "[vcvarsall.bat] Environment initialized")
-      |> List.skip 1
-      |> List.map (fun line -> line.Split '=')
-      |> List.takeWhile (fun parts -> parts.Length = 2)
-      |> List.map (fun parts -> parts[0], parts[1])
-      |> Map
-
-    CreateProcess.fromRawCommandLine
-      "cmd"
-      $"""/c "{vsvars}" {arch hostArchitecture targetArchitecture} -vcvars_ver={Version} && set """
-    |> CreateProcess.ensureExitCode
-    |> CreateProcess.redirectOutput
-    |> CreateProcess.mapResult parse
-    |> Proc.run
-    |> fun x -> x.Result
-
-module private Swig =
-  let exe =
-    lazy
-      (let binary =
-        match Runtime.Host.OS with
-        | Runtime.Windows -> "swigwin-*/swig.exe"
-
-       Paket.files </> "**" </> binary
-       |> GlobbingPattern.create
-       |> Seq.exactlyOne)
-
-  type LanguageOptions = | CSharp of {| DllImport : string |}
-
-  type InputOptions = | InputFiles of string list
-
-  type GeneralOptions = {
-    /// Language-specific options
-    Language : LanguageOptions
-    /// Enable C++ processing
-    EnableCppProcessing : bool
-    /// Path for the output (wrapper) file
-    OutputFile : string
-    /// Path for language-specific files
-    OutputDirectory : string
-    /// Path(s) for input file(s)
-    Input : InputOptions
+  /// A description for native development based on [Vcpkg's triplets](https://github.com/microsoft/vcpkg/blob/master/docs/users/triplets.md).
+  type Platform = {
+    OS : OS
+    Architecture : Architecture
   }
 
-  let private args opts =
-    let args =
-      Arguments.Empty
-      |> Arguments.appendIf opts.EnableCppProcessing "-c++"
-      |> Arguments.append [ "-o" ; opts.OutputFile ]
-      |> Arguments.append [ "-outdir" ; opts.OutputDirectory ]
+  module Platform =
+    open FsToolkit.ErrorHandling
 
-    let args =
-      match opts.Language with
-      | CSharp opts ->
-        args
-        |> Arguments.append [ "-csharp" ]
-        |> Arguments.append [ "-dllimport" ; opts.DllImport ]
+    let toString (platform : Platform) =
+      $"{Architecture.toString platform.Architecture}-{OS.toString platform.OS}"
 
-    let args =
-      match opts.Input with
-      | InputFiles files -> args |> Arguments.append files
+    let tryParse str =
+      match str |> String.split '-' with
+      | [ arch ; os ] -> option {
+          let! os = OS.tryParse os
+          let! arch = Architecture.tryParse arch
+          return { OS = os ; Architecture = arch }
+        }
+      | _ -> None
 
-    Arguments.toList args
+    open System.Runtime.InteropServices
 
-  let run opts =
-    args opts |> CreateProcess.fromRawCommand exe.Value
+    /// The current (host) platform.
+    let host = {
+      OS =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+          Windows
+        else
+          invalidOp
+            $"{RuntimeInformation.OSDescription} is an unsupported operating system"
+      Architecture =
+        match RuntimeInformation.ProcessArchitecture with
+        | Architecture.X86 -> X86
+        | Architecture.X64 -> X64
+        | arch -> invalidOp $"{arch} is an unsupported architecture"
+    }
 
-module private CMake =
+    /// All supported (target) platforms for this solution.
+    let targets =
+      Set [
+        { OS = Windows ; Architecture = X86 }
+        { OS = Windows ; Architecture = X64 }
+      ]
 
-  let exe =
-    lazy
-      (let binary =
-        match Runtime.Host.OS, Runtime.Host.Architecture with
-        | Runtime.Windows, Runtime.X86 -> "windows-i386/bin/cmake.exe"
-        | Runtime.Windows, Runtime.X64 -> "windows-x86_64/bin/cmake.exe"
+  module Path =
+    let root = __SOURCE_DIRECTORY__ </> ".."
+    let ignored = IgnoreList (root </> ".gitignore")
 
-       Paket.files </> "**" </> $"cmake-*-{binary}"
-       |> GlobbingPattern.create
-       |> Seq.exactlyOne)
+/// Tools used by this solution (which could probably be moved elsewhere).
+[<AutoOpen>]
+module private Tools =
+  module DotNet =
+    let install = lazy DotNet.install DotNet.Versions.FromGlobalJson
 
-module private Projects =
-  module src =
-    module dotnet =
-      let path = Path.root </> "src" </> "dotnet"
-      /// The name for the generated wrapper file.
-      let wrapperFileName = "Whisper.g.cxx"
-      /// The name for the library
-      let libraryFileName = "whisper"
+  module Paket =
+    let files = Path.root </> "paket-files"
 
-      let generate () =
+    let restore () =
+      Paket.restore (fun p ->
+        { p with
+            ToolType = ToolType.CreateLocalTool DotNet.install.Value
+        })
 
-        File.deleteAll (!!(path </> "**/*.g.*"))
+  module Ninja =
+    let exe =
+      lazy
+        (let binary =
+          match Platform.host.OS with
+          | Windows -> "ninja.exe"
 
-        let files = IO.Directory.CreateTempSubdirectory ()
+         Paket.files </> "**" </> binary
+         |> GlobbingPattern.create
+         |> Seq.exactlyOne)
 
-        Swig.run
-          {
-            Language = Swig.CSharp {| DllImport = "test" |}
-            EnableCppProcessing = true
-            OutputFile = path </> wrapperFileName
-            OutputDirectory = files.FullName
-            Input = Swig.InputFiles [ path </> "whisper.i" ]
-          }
-        |> CreateProcess.ensureExitCode
-        |> Proc.run
-        |> ignore
+  module Msvc =
+    open BlackFox.VsWhere
 
-        for file in files.EnumerateFiles () do
-          let target =
-            file.FullName
-            |> Path.toRelativeFrom files.FullName
-            |> Path.changeExtension $".g{file.Extension}"
-            |> Path.combine path
+    /// The requested version of MSVC
+    [<Literal>]
+    let Version = "14.34"
 
-          file.MoveTo target
+    /// Gets the MSVC environment variables from [vcvarsall.bat](https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170#developer_command_file_locations).
+    let vcvars hostArchitecture targetArchitecture =
 
-        files.Delete true
+      // https://devblogs.microsoft.com/cppblog/finding-the-visual-c-compiler-tools-in-visual-studio-2017/#c-installation-workloads-and-components
+      let components = "Microsoft.VisualStudio.Component.VC.Tools.x86.x64"
 
-      let clean () =
-        File.deleteAll (GlobbingPattern.create (path </> "**/*.g.*"))
+      let vsvars =
+        VsInstances.getWithPackage components false
+        |> List.sortByDescending (fun i -> i.InstallationVersion)
+        |> List.tryHead
+        |> function
+          | Some i ->
+            Path.combine i.InstallationPath "VC/Auxiliary/Build/vcvarsall.bat"
+          | None -> invalidOp $"MSVC installation could not be found"
 
+      /// Determines the 'arch' argument for vsvarsall from a host and target architecture.
+      let arch host target =
+        match host, target with
+        | X64, X64 -> "amd64"
+        | X64, X86 -> "amd64_x86"
+        | X86, X86 -> "x86"
+        | X86, X64 -> "x86_amd64"
 
-module private Subjects =
+      let parse (r : ProcessOutput) : Map<string, string> =
+        r.Output
+        |> String.splitStr Environment.NewLine
+        |> List.skipWhile (fun line ->
+          not <| line.StartsWith "[vcvarsall.bat] Environment initialized")
+        |> List.skip 1
+        |> List.map (fun line -> line.Split '=')
+        |> List.takeWhile (fun parts -> parts.Length = 2)
+        |> List.map (fun parts -> parts[0], parts[1])
+        |> Map
+
+      CreateProcess.fromRawCommandLine
+        "cmd"
+        $"""/c "{vsvars}" {arch hostArchitecture targetArchitecture} -vcvars_ver={Version} && set """
+      |> CreateProcess.ensureExitCode
+      |> CreateProcess.redirectOutput
+      |> CreateProcess.mapResult parse
+      |> Proc.run
+      |> fun x -> x.Result
+
+  module Swig =
+    let exe =
+      lazy
+        (let binary =
+          match Platform.host.OS with
+          | Windows -> "swigwin-*/swig.exe"
+
+         Paket.files </> "**" </> binary
+         |> GlobbingPattern.create
+         |> Seq.exactlyOne)
+
+    type LanguageOptions = | CSharp of {| DllImport : string |}
+
+    type InputOptions = | InputFiles of string list
+
+    type GeneralOptions = {
+      /// Language-specific options
+      Language : LanguageOptions
+      /// Enable C++ processing
+      EnableCppProcessing : bool
+      /// Path for the output (wrapper) file
+      OutputFile : string
+      /// Path for language-specific files
+      OutputDirectory : string
+      /// Path(s) for input file(s)
+      Input : InputOptions
+    }
+
+    let private args opts =
+      let args =
+        Arguments.Empty
+        |> Arguments.appendIf opts.EnableCppProcessing "-c++"
+        |> Arguments.append [ "-o" ; opts.OutputFile ]
+        |> Arguments.append [ "-outdir" ; opts.OutputDirectory ]
+
+      let args =
+        match opts.Language with
+        | CSharp opts ->
+          args
+          |> Arguments.append [ "-csharp" ]
+          |> Arguments.append [ "-dllimport" ; opts.DllImport ]
+
+      let args =
+        match opts.Input with
+        | InputFiles files -> args |> Arguments.append files
+
+      Arguments.toList args
+
+    let run opts =
+      args opts |> CreateProcess.fromRawCommand exe.Value
+
+  module CMake =
+
+    let exe =
+      lazy
+        (let binary =
+          match Platform.host.OS, Platform.host.Architecture with
+          | Windows, X86 -> "windows-i386/bin/cmake.exe"
+          | Windows, X64 -> "windows-x86_64/bin/cmake.exe"
+
+         Paket.files </> "**" </> $"cmake-*-{binary}"
+         |> GlobbingPattern.create
+         |> Seq.exactlyOne)
+
+/// The build actions for this solution.
+module private Actions =
+
   module fsharp =
     let private fantomas = DotNet.exec id "fantomas"
 
@@ -228,18 +286,24 @@ module private Subjects =
     let source = Path.root
     let out = source </> "out"
 
-    let private getToolchain (targetPlatform : Runtime.Platform) =
-      match Runtime.Host, targetPlatform with
-      | { OS = Runtime.Windows }, { OS = Runtime.Windows } ->
+    module dotnet =
+      /// The name for the generated wrapper file.
+      let wrapperFileName = "Whisper.g.cxx"
+      /// The name for the library
+      let libraryName = "whisper"
+
+    let private getToolchain (targetPlatform : Platform) =
+      match Platform.host, targetPlatform with
+      | { OS = Windows }, { OS = Windows } ->
         let env =
-          Msvc.vcvars Runtime.Host.Architecture targetPlatform.Architecture
+          Msvc.vcvars Platform.host.Architecture targetPlatform.Architecture
 
         {|
           Env = EnvMap.ofMap env
-          Bin = out </> Runtime.Platform.toString targetPlatform
+          Bin = out </> Platform.toString targetPlatform
         |}
 
-    let configure (targetPlatform : Runtime.Platform) =
+    let configure (targetPlatform : Platform) =
       let toolchain = getToolchain targetPlatform
 
       CMake.generate (fun p ->
@@ -247,9 +311,10 @@ module private Subjects =
         let args = [
           $"-B{toolchain.Bin}"
           $"-DCMAKE_MAKE_PROGRAM={Ninja.exe.Value}"
+          $"-DCMAKE_CONFIGURATION_TYPES={String.Join (';', Configuration.all |> Seq.map Configuration.toString)}"
           $"-DSWIG_EXECUTABLE={Swig.exe.Value}"
-          $"-DSRC_DOTNET_WRAPPER_FILE_NAME={Projects.src.dotnet.wrapperFileName}"
-          $"-DSRC_DOTNET_LIBRARY_FILE_NAME={Projects.src.dotnet.libraryFileName}"
+          $"-DDOTNET_WRAPPER_FILE_NAME={dotnet.wrapperFileName}"
+          $"-DDOTNET_LIBRARY_NAME={dotnet.libraryName}"
         ]
 
         { p with
@@ -263,13 +328,14 @@ module private Subjects =
       |> Proc.run
       |> ignore
 
-    let build (targetPlatform : Runtime.Platform) =
+    let build (targetPlatform : Platform) (configuration : Configuration) =
       let toolchain = getToolchain targetPlatform
 
       CMake.build (fun p ->
         { p with
             ToolPath = CMake.exe.Value
             BinaryDirectory = toolchain.Bin
+            Config = Configuration.toString configuration
         })
       |> CreateProcess.withEnvironmentMap toolchain.Env
       |> CreateProcess.ensureExitCode
@@ -279,80 +345,254 @@ module private Subjects =
     let clean () = Directory.delete out
 
 
+  module dotnet =
+    let root = Path.root </> "src" </> "dotnet"
+    let runtime = root </> "runtime"
 
-module Target =
+    let private common opts =
+      let opts = DotNet.install.Value opts
+      { opts with WorkingDirectory = root }
+
+
+    let clean () =
+      File.deleteAll (GlobbingPattern.create (root </> "**/*.g.*"))
+      let res = DotNet.exec common "clean" ""
+
+      if not res.OK then
+        failwith <| failwith $"{String.toLines res.Errors}"
+
+    let restore () =
+      DotNet.restore (fun x -> x.WithCommon common) root
+
+    let generate () =
+
+      File.deleteAll (!!(root </> "**/*.g.*"))
+
+      let files = IO.Directory.CreateTempSubdirectory ()
+
+      Swig.run
+        {
+          Language = Swig.CSharp {| DllImport = "test" |}
+          EnableCppProcessing = true
+          OutputFile = runtime </> cpp.dotnet.wrapperFileName
+          OutputDirectory = files.FullName
+          Input = Swig.InputFiles [ runtime </> "whisper.i" ]
+        }
+      |> CreateProcess.ensureExitCode
+      |> Proc.run
+      |> ignore
+
+      for file in files.EnumerateFiles () do
+        let target =
+          file.FullName
+          |> Path.toRelativeFrom files.FullName
+          |> Path.changeExtension $".g{file.Extension}"
+          |> Path.combine runtime
+
+        file.MoveTo target
+
+      files.Delete true
+
+    let build configuration =
+      let getLibraryFileName platform =
+        cpp.out
+        </> Platform.toString platform
+        </> "bin"
+        </> Configuration.toString configuration
+        </> match platform.OS with
+            | Windows -> $"{cpp.dotnet.libraryName}.dll"
+
+      DotNet.build
+        (fun x ->
+          { x with
+              Common = common x.Common
+              Configuration =
+                match configuration with
+                | Debug -> DotNet.BuildConfiguration.Debug
+                | Release -> DotNet.BuildConfiguration.Release
+              MSBuildParams =
+                { x.MSBuildParams with
+                    Properties =
+                      [
+                        "LibraryFileNameX64Windows",
+                        getLibraryFileName { OS = Windows ; Architecture = X64 }
+
+                        "IsHostX64Windows",
+                        string (
+                          Platform.host = { OS = Windows ; Architecture = X64 }
+                        )
+
+                        "LibraryFileNameX86Windows",
+                        getLibraryFileName { OS = Windows ; Architecture = X86 }
+
+                        "IsHostX64Windows",
+                        string (
+                          Platform.host = { OS = Windows ; Architecture = X86 }
+                        )
+                      ]
+                }
+
+          })
+        root
+
+
+module private Target =
+  open Argu
+
+  [<RequiresExplicitTypeArguments>]
+  let createWithArgs<'args when 'args :> IArgParserTemplate> name f =
+    let parser = ArgumentParser.Create<'args> (programName = name)
+
+    Target.create name (fun p ->
+      let results =
+        parser.Parse (
+          Array.ofList p.Context.Arguments,
+          ignoreUnrecognized = true // TODO track and handle unused args across multiple targets
+        )
+
+      f results)
+
+/// Actions integrated with CLI args.
+module private Args =
+  open Argu
   open FsToolkit.ErrorHandling
 
-  module private cpp =
-    let parseArgs (p : TargetParameter) =
-      let doc =
-        Docopt.create
-          $"""usage: %s{p.TargetInfo.Name} [--platform=<platform>]..."""
+  let parsePlatforms postProcess =
+    let platforms =
+      postProcess
+      <| fun arg ->
+           match Platform.tryParse arg with
+           | Some p when Platform.targets.Contains p -> p
+           | Some p -> failwith $"'{p}' is not a supported platform"
+           | None -> failwith $"'{arg}' is not a valid platform"
 
-      let parameters = validation {
-        let! args = doc.TryParse p.Context.Arguments
+    let platforms =
+      if List.isEmpty platforms then
+        [ Platform.host ]
+      else
+        platforms
 
-        let! platforms =
-          args
-          |> DocoptResult.tryGetArguments "--platform"
-          |> Option.defaultValue []
-          |> List.traverseResultA (fun str ->
-            match Runtime.Platform.tryParse str with
-            | Some p -> Ok p
-            | None -> Error $"'{str}' is not a valid platform")
-          |> Result.map (function
-            | [] -> [ Runtime.Host ]
-            | xs -> xs)
-          |> Result.map Set
+    Set platforms
 
-        return {| Platforms = platforms |}
-      }
+  let parseConfigurations postProcess =
+    let configurations =
+      postProcess
+      <| fun arg ->
+           match Configuration.tryParse arg with
+           | Some c when Configuration.all.Contains c -> c
+           | Some c -> failwith $"'{c}' is not a supported configuration"
+           | None -> failwith $"'{arg}' is not a valid configuration"
 
-      match parameters with
-      | Validation.Ok p -> p
-      | Validation.Error e ->
-        "Invalid arguments: " + String.concat "; " e |> Target.fail
+    let configurations =
+      if List.isEmpty configurations then
+        [ Debug ]
+      else
+        configurations
+
+    Set configurations
+
+  module fsharp =
+
+    [<RequireQualifiedAccess>]
+    type check =
+      | [<MainCommand ; Last>] Files of file : string list
+
+      interface IArgParserTemplate with
+        member s.Usage =
+          match s with
+          | Files _ -> "specify files to check"
+
+  module cpp =
+
+    [<RequireQualifiedAccess>]
+    type configure =
+      | Platform of platform : string
+
+      interface IArgParserTemplate with
+        member s.Usage =
+          match s with
+          | Platform _ -> "specify a target platform"
+
+    [<RequireQualifiedAccess>]
+    type build =
+      | Configuration of configuration : string
+      | Platform of platform : string
+
+      interface IArgParserTemplate with
+        member s.Usage =
+          match s with
+          | Configuration _ -> "specify zero or more configurations"
+          | Platform _ -> "specify zero or more target platforms"
+
+  module dotnet =
+    [<RequireQualifiedAccess>]
+    type build =
+      | Configuration of configuration : string
+
+      interface IArgParserTemplate with
+        member s.Usage =
+          match s with
+          | Configuration _ -> "specify zero or more configurations"
 
 
-  // Target names like {subject}:{action}
-  let init () =
-    Target.initEnvironment ()
 
-    Target.create "fsharp:check" (fun p ->
-      match p.Context.Arguments with
-      | [] -> Subjects.fsharp.check None
-      | files -> Subjects.fsharp.check (Some files))
+// Target names like {subject}:{action}
+let init () =
+  Target.initEnvironment ()
 
-    Target.create "fsharp:format" (fun _ -> Subjects.fsharp.format ())
+  Target.createWithArgs<Args.fsharp.check> "fsharp:check" (fun args ->
+    let files = args.TryGetResult Args.fsharp.check.Files
+    Actions.fsharp.check files)
 
-    Target.create "cpp:clean" (fun p -> Subjects.cpp.clean ())
+  Target.create "fsharp:format" (fun _ -> Actions.fsharp.format ())
 
-    Target.create "cpp:configure" (fun p ->
-      let parameters = cpp.parseArgs p
+  Target.create "cpp:clean" (fun _ -> Actions.cpp.clean ())
 
-      for platform in parameters.Platforms do
-        Subjects.cpp.configure platform)
+  Target.createWithArgs<Args.cpp.configure> "cpp:configure" (fun args ->
+    let platforms =
+      Args.parsePlatforms (fun p ->
+        args.PostProcessResults (Args.cpp.configure.Platform, p))
 
-    Target.create "cpp:build" (fun p ->
-      let parameters = cpp.parseArgs p
+    for platform in platforms do
+      Actions.cpp.configure platform)
 
-      for platform in parameters.Platforms do
-        Subjects.cpp.build platform)
+  Target.createWithArgs<Args.cpp.build> "cpp:build" (fun args ->
+    let platforms =
+      Args.parsePlatforms (fun p ->
+        args.PostProcessResults (Args.cpp.build.Platform, p))
 
-    Target.create "src/dotnet:clean" (fun p -> Projects.src.dotnet.clean ())
+    let configurations =
+      Args.parseConfigurations (fun p ->
+        args.PostProcessResults (Args.cpp.build.Configuration, p))
 
-    Target.create "src/dotnet:generate" (fun p ->
-      Projects.src.dotnet.generate ())
+    for (platform, configuration) in Seq.allPairs platforms configurations do
+      Actions.cpp.build platform configuration)
 
-    Target.create "clean" ignore
-    Target.create "restore" ignore
-    Target.create "build" ignore
+  Target.create "dotnet:clean" (fun p -> Actions.dotnet.clean ())
 
-    "clean" <== [ "src/dotnet:clean" ; "cpp:clean" ]
-    "restore" <== [ "cpp:configure" ; "src/dotnet:generate" ]
-    "build" <== [ "cpp:build" ]
+  Target.create "dotnet:restore" (fun p -> Actions.dotnet.restore ())
 
-    "clean" ?=> "restore" ==> "build"
+  Target.createWithArgs<Args.dotnet.build> "dotnet:build" (fun args ->
+    let configurations =
+      Args.parseConfigurations (fun p ->
+        args.PostProcessResults (Args.dotnet.build.Configuration, p))
+
+    for configuration in configurations do
+      Actions.dotnet.build configuration)
+
+  Target.create "dotnet:generate" (fun p -> Actions.dotnet.generate ())
+
+  Target.create "clean" ignore
+  Target.create "restore" ignore
+  Target.create "generate" ignore
+  Target.create "build" ignore
+
+  "clean" <== [ "cpp:clean" ; "dotnet:clean" ]
+  "restore" <== [ "dotnet:restore" ]
+  "generate" <== [ "cpp:configure" ; "dotnet:generate" ]
+  "build" <== [ "dotnet:build" ; "cpp:build" ]
+
+  "clean" ?=> "restore" ==> "generate" ==> "build"
 
 
 
@@ -364,8 +604,8 @@ let main argv =
   |> Context.RuntimeContext.Fake
   |> Context.setExecutionContext
 
-  let _ = Target.init ()
-  let ctx = Target.WithContext.runOrDefaultWithArguments "Build.Cpp"
+  let _ = init ()
+  let ctx = Target.WithContext.runOrDefaultWithArguments "build"
   Target.updateBuildStatus ctx
 
   match Target.results ctx with

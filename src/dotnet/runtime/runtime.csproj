@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <IsHostX64Windows Condition="$(IsHostX64Windows)==''">false</IsHostX64Windows>
+    <IsHostX86Windows Condition="$(IsHostX86Windows)==''">false</IsHostX86Windows>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="$(LibraryFileNameX64Windows)" Condition="Exists($(LibraryFileNameX64Windows))">
+      <!-- <Link>whisper.dll</Link> -->
+      <PackagePath>runtimes/win-x64/native</PackagePath>
+      <Pack>true</Pack>
+      <CopyToOutputDirectory Condition="$(IsHostX64Windows)">PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </Content>
+    <Content Include="$(LibraryFileNameX86Windows)" Condition="Exists($(LibraryFileNameX86Windows))">
+      <!-- <Link>whisper.dll</Link> -->
+      <PackagePath>runtimes/win-x86/native</PackagePath>
+      <Pack>true</Pack>
+      <CopyToOutputDirectory Condition="$(IsHostX86Windows)">PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </Content>
+
+  </ItemGroup>
+
+  <Import Project="../../../.paket/Paket.Restore.targets" />
+
+</Project>
