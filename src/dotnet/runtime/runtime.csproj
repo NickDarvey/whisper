@@ -11,14 +11,14 @@
 
   <ItemGroup>
     <Content Include="$(LibraryFileNameX64Windows)" Condition="Exists($(LibraryFileNameX64Windows))">
-      <!-- <Link>whisper.dll</Link> -->
+      <Link>whisper.dll</Link>
       <PackagePath>runtimes/win-x64/native</PackagePath>
       <Pack>true</Pack>
       <CopyToOutputDirectory Condition="$(IsHostX64Windows)">PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
     <Content Include="$(LibraryFileNameX86Windows)" Condition="Exists($(LibraryFileNameX86Windows))">
-      <!-- <Link>whisper.dll</Link> -->
+      <Link>whisper.dll</Link>
       <PackagePath>runtimes/win-x86/native</PackagePath>
       <Pack>true</Pack>
       <CopyToOutputDirectory Condition="$(IsHostX86Windows)">PreserveNewest</CopyToOutputDirectory>

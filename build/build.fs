@@ -104,6 +104,8 @@ module private Solution =
       ]
 
   module Path =
+    let private toUnixDirectorySeperators = String.replace "\"" "/"
+    let asdf = Path.convertWindowsToCurrentPath
     let root = __SOURCE_DIRECTORY__ </> ".."
     let ignored = IgnoreList (root </> ".gitignore")
 
@@ -112,6 +114,15 @@ module private Solution =
 module private Tools =
   module DotNet =
     let install = lazy DotNet.install DotNet.Versions.FromGlobalJson
+
+  // let private execWithBinLog project common command args msBuildArgs =
+  //     let argString = MSBuild.fromCliArguments msBuildArgs
+
+  //     let binLogPath, args =
+  //         addBinaryLogger msBuildArgs.DisableInternalBinLog (args + " " + argString) common
+
+  //     let result = exec (fun _ -> common) command args
+  //     MSBuild.handleAfterRun (sprintf "dotnet %s" command) binLogPath result.ExitCode project
 
   module Paket =
     let files = Path.root </> "paket-files"
@@ -346,33 +357,72 @@ module private Actions =
 
 
   module dotnet =
-    let root = Path.root </> "src" </> "dotnet"
-    let runtime = root </> "runtime"
+    let relative = "src" </> "dotnet"
+
+    let sln = relative </> "dotnet.sln"
+    let runtime = relative </> "runtime"
 
     let private common opts =
       let opts = DotNet.install.Value opts
-      { opts with WorkingDirectory = root }
+
+      { opts with
+          WorkingDirectory = Path.root
+      }
+
+    let private cfg configuration =
+      match configuration with
+      | Debug -> DotNet.BuildConfiguration.Debug
+      | Release -> DotNet.BuildConfiguration.Release
+
+    let private props configuration =
+      let getLibraryFileName platform =
+        cpp.out
+        </> Platform.toString platform
+        </> runtime
+        </> Configuration.toString configuration
+        </> match platform.OS with
+            | Windows -> $"{cpp.dotnet.libraryName}.dll"
+      // https://github.com/fsprojects/FAKE/issues/2392#issuecomment-530572846
+
+      [
+        "LibraryFileNameX64Windows",
+        getLibraryFileName { OS = Windows ; Architecture = X64 }
+
+        "IsHostX64Windows",
+        string (Platform.host = { OS = Windows ; Architecture = X64 })
+
+        "LibraryFileNameX86Windows",
+        getLibraryFileName { OS = Windows ; Architecture = X86 }
+
+        "IsHostX86Windows",
+        string (Platform.host = { OS = Windows ; Architecture = X86 })
+      ]
 
 
     let clean () =
-      File.deleteAll (GlobbingPattern.create (root </> "**/*.g.*"))
-      let res = DotNet.exec common "clean" ""
+      File.deleteAll (
+        GlobbingPattern.create (Path.root </> relative </> "**/*.g.*")
+      )
+
+      let res = DotNet.exec common "clean" sln
 
       if not res.OK then
         failwith <| failwith $"{String.toLines res.Errors}"
 
     let restore () =
-      DotNet.restore (fun x -> x.WithCommon common) root
+      DotNet.restore (fun x -> x.WithCommon common) sln
 
     let generate () =
 
-      File.deleteAll (!!(root </> "**/*.g.*"))
+      File.deleteAll (
+        GlobbingPattern.create (Path.root </> relative </> "**/*.g.*")
+      )
 
       let files = IO.Directory.CreateTempSubdirectory ()
 
       Swig.run
         {
-          Language = Swig.CSharp {| DllImport = "test" |}
+          Language = Swig.CSharp {| DllImport = cpp.dotnet.libraryName |}
           EnableCppProcessing = true
           OutputFile = runtime </> cpp.dotnet.wrapperFileName
           OutputDirectory = files.FullName
@@ -394,46 +444,33 @@ module private Actions =
       files.Delete true
 
     let build configuration =
-      let getLibraryFileName platform =
-        cpp.out
-        </> Platform.toString platform
-        </> "bin"
-        </> Configuration.toString configuration
-        </> match platform.OS with
-            | Windows -> $"{cpp.dotnet.libraryName}.dll"
-
       DotNet.build
         (fun x ->
           { x with
               Common = common x.Common
-              Configuration =
-                match configuration with
-                | Debug -> DotNet.BuildConfiguration.Debug
-                | Release -> DotNet.BuildConfiguration.Release
+              // NoRestore = true
+              Configuration = cfg configuration
               MSBuildParams =
                 { x.MSBuildParams with
-                    Properties =
-                      [
-                        "LibraryFileNameX64Windows",
-                        getLibraryFileName { OS = Windows ; Architecture = X64 }
-
-                        "IsHostX64Windows",
-                        string (
-                          Platform.host = { OS = Windows ; Architecture = X64 }
-                        )
-
-                        "LibraryFileNameX86Windows",
-                        getLibraryFileName { OS = Windows ; Architecture = X86 }
-
-                        "IsHostX64Windows",
-                        string (
-                          Platform.host = { OS = Windows ; Architecture = X86 }
-                        )
-                      ]
+                    Properties = props configuration
                 }
-
           })
-        root
+        sln
+
+    let test configuration =
+      DotNet.test
+        (fun x ->
+          { x with
+              Common = common x.Common
+              NoBuild = true
+              NoRestore = true
+              Configuration = cfg configuration
+              MSBuildParams =
+                { x.MSBuildParams with
+                    Properties = props configuration
+                }
+          })
+        sln
 
 
 module private Target =
@@ -572,6 +609,8 @@ let init () =
 
   Target.create "dotnet:restore" (fun p -> Actions.dotnet.restore ())
 
+  Target.create "dotnet:generate" (fun p -> Actions.dotnet.generate ())
+
   Target.createWithArgs<Args.dotnet.build> "dotnet:build" (fun args ->
     let configurations =
       Args.parseConfigurations (fun p ->
@@ -580,19 +619,29 @@ let init () =
     for configuration in configurations do
       Actions.dotnet.build configuration)
 
-  Target.create "dotnet:generate" (fun p -> Actions.dotnet.generate ())
+  Target.createWithArgs<Args.dotnet.build> "dotnet:test" (fun args ->
+    let configurations =
+      Args.parseConfigurations (fun p ->
+        args.PostProcessResults (Args.dotnet.build.Configuration, p))
+
+    for configuration in configurations do
+      Actions.dotnet.test configuration)
+
 
   Target.create "clean" ignore
   Target.create "restore" ignore
   Target.create "generate" ignore
   Target.create "build" ignore
+  Target.create "test" ignore
 
   "clean" <== [ "cpp:clean" ; "dotnet:clean" ]
   "restore" <== [ "dotnet:restore" ]
   "generate" <== [ "cpp:configure" ; "dotnet:generate" ]
   "build" <== [ "dotnet:build" ; "cpp:build" ]
+  "test" <== [ "dotnet:test" ]
 
-  "clean" ?=> "restore" ==> "generate" ==> "build"
+  "clean" ?=> "restore" ==> "generate" ==> "build" ==> "test"
+
 
 
 
