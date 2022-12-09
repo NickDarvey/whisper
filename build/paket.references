@@ -1,3 +1,5 @@
+group build
+Argu
 FSharp.Core
 Fake.Build.CMake
 Fake.Core.Target
@@ -6,4 +8,3 @@ Fake.DotNet.Paket
 Fake.Tools.Git
 MAB.DotIgnore
 FsToolkit.ErrorHandling
-Argu

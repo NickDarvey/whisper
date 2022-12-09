@@ -2,13 +2,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
   </PropertyGroup>
-  <ItemGroup>
-    <Content Include="*.bin" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../runtime/runtime.csproj" />
   </ItemGroup>

@@ -1,16 +1,28 @@
-source https://api.nuget.org/v3/index.json
+group build
+  source https://api.nuget.org/v3/index.json
+  storage: none
+  framework: auto-detect
 
-storage: none
-framework: auto-detect
-nuget Argu
-nuget FSharp.Core ~> 7
-nuget Fake.Build.CMake ~> 6 prerelease
-nuget Fake.Core.Target ~> 6 prerelease
-nuget Fake.DotNet.Cli ~> 6 prerelease
-nuget Fake.DotNet.Paket ~> 6 prerelease
-nuget Fake.Tools.Git ~> 6 prerelease
-nuget FsToolkit.ErrorHandling
-nuget MAB.DotIgnore
-http https://github.com/Kitware/CMake/releases/download/v3.25.1/cmake-3.25.1-windows-x86_64.zip
-http https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-win.zip
-http http://prdownloads.sourceforge.net/swig/swigwin-4.1.1.zip
+  nuget Argu ~> 6
+  nuget FSharp.Core ~> 7
+  nuget FsToolkit.ErrorHandling ~> 4
+  nuget Fake.Build.CMake ~> 6 prerelease
+  nuget Fake.Core.Target ~> 6 prerelease
+  nuget Fake.DotNet.Cli ~> 6 prerelease
+  nuget Fake.DotNet.Paket ~> 6 prerelease
+  nuget Fake.Tools.Git ~> 6 prerelease
+  nuget MAB.DotIgnore
+  http https://github.com/Kitware/CMake/releases/download/v3.25.1/cmake-3.25.1-windows-x86_64.zip
+  http https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-win.zip
+  http http://prdownloads.sourceforge.net/swig/swigwin-4.1.1.zip
+
+group dotnet
+  source https://api.nuget.org/v3/index.json
+  storage: none
+  framework: auto-detect
+
+  nuget Microsoft.NET.Test.Sdk ~> 17.3
+  nuget xunit ~> 2.4
+  nuget xunit.runner.visualstudio ~> 2.4
+  nuget coverlet.collector ~> 3.1
+  nuget NAudio ~> 2.1
