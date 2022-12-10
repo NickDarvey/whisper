@@ -1,14 +1,10 @@
 using System;
-using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Formats.Tar;
 using System.IO;
 using System.Linq;
-using System.Runtime.Intrinsics.X86;
 using NAudio.Wave;
-using static csWhisper;
+using static Whisper;
 
 public class Program
 {
@@ -19,7 +15,10 @@ public class Program
 
   private static float? GetNextFrame(WaveStream stream)
   {
-    if (stream.WaveFormat != Format) throw new ArgumentException("WaveStream format must be Program.Format", nameof(stream));
+    if (stream.WaveFormat.BitsPerSample != Format.BitsPerSample) throw new ArgumentException($"WaveStream format must be Program.Format. (BitsPerSample do not match.)", nameof(stream));
+    if (stream.WaveFormat.SampleRate != Format.SampleRate) throw new ArgumentException($"WaveStream format must be Program.Format. (SampleRate do not match.)", nameof(stream));
+    if (stream.WaveFormat.Channels != Format.Channels) throw new ArgumentException($"WaveStream format must be Program.Format. (Channels do not match.)", nameof(stream));
+
 
     var bytes = new byte[stream.WaveFormat.BlockAlign];
 
@@ -89,8 +88,9 @@ public class Program
   private static void Process(SWIGTYPE_p_whisper_context context, whisper_full_params parameters, string inputPath, string outputPath)
   {
 
-    using (var mp3s = new Mp3FileReader(inputPath))
-    using (var wavs = Convert(mp3s))
+    // using (var mp3s = new Mp3FileReader(inputPath))
+    // using (var wavs = Convert(mp3s))
+    using (var wavs = new WaveFileReader(inputPath))
     using (var writer = new StreamWriter(outputPath))
     // using (var wavreader = new WaveFileReader(filePath))
     {
@@ -103,8 +103,8 @@ public class Program
 
       Console.WriteLine($"Processing {wavs.TotalTime} in length");
 
-      var buffer = new Memory<float>(new float[ChunkSizeInFrames]);
-      //var buffer = new Memory<float>(new float[GetLengthInFrames(wavs)]);
+      // var buffer = new Memory<float>(new float[ChunkSizeInFrames]);
+      var buffer = new Memory<float>(new float[GetLengthInFrames(wavs)]);
 
       foreach (var (chunki, chunk) in ProcessFramesWithBuffer(buffer, wavs))
       {
@@ -113,9 +113,11 @@ public class Program
         if(chunki == 0) parameters.no_context = true;
         else parameters.no_context = false;
 
+        var test = chunk.ToArray();
+
         // TODO: Update the wrapper to accept a span
         // https://learn.microsoft.com/en-us/dotnet/standard/memory-and-spans/memory-t-usage-guidelines#usage-guidelines
-        var ret = whisper_full(context, parameters, chunk.ToArray(), chunk.Length);
+        var ret = whisper_full(context, parameters, test, test.Length);
         if (ret != 0) throw new InvalidOperationException("Failed to process audio");
 
         var segmentsCount = whisper_full_n_segments(context);
@@ -135,17 +137,16 @@ public class Program
 
   public static void Main()
   {
-    var files =
-      Directory.EnumerateFiles("some files", "*.mp3", SearchOption.AllDirectories)
-      .Order();
+    // var files =
+    //   Directory.EnumerateFiles("../../samples", "*.mp3", SearchOption.AllDirectories)
+    //   .Order();
 
-    // var files = new[] {
-    //   "jfk1.wav",
-    //   "sam.wav"
-    // };
+    var files = new[] {
+      "C:\\Users\\nickd\\source\\repos\\whisper\\samples\\jfk1.wav",
+    };
 
 
-    var context = whisper_init("./ggml-base.en.bin");
+    var context = whisper_init("C:\\Users\\nickd\\source\\repos\\whisper\\samples\\ggml-base.en.bin");
     var parameters = whisper_full_default_params(whisper_sampling_strategy.WHISPER_SAMPLING_GREEDY);
 
     parameters.print_realtime = true;

@@ -3,23 +3,31 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
-  <PropertyGroup>
-    <IsHostX64Windows Condition="$(IsHostX64Windows)==''">false</IsHostX64Windows>
-    <IsHostX86Windows Condition="$(IsHostX86Windows)==''">false</IsHostX86Windows>
-  </PropertyGroup>
   <ItemGroup>
+    <!-- For local development -->
+    <Content Include="$(LibraryFileNameHost)">
+      <LinkBase>.</LinkBase>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>false</Pack>
+      <Visible>false</Visible>
+    </Content>
+    <Content Include="$(LibraryPdbNameHost)" Condition="Exists($(LibraryPdbNameHost))">
+      <LinkBase>.</LinkBase>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>false</Pack>
+      <Visible>false</Visible>
+    </Content>
+    <!-- For package -->
     <Content Include="$(LibraryFileNameX64Windows)" Condition="Exists($(LibraryFileNameX64Windows))">
       <Link>whisper.dll</Link>
       <PackagePath>runtimes/win-x64/native</PackagePath>
       <Pack>true</Pack>
-      <CopyToOutputDirectory Condition="$(IsHostX64Windows)">PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
     <Content Include="$(LibraryFileNameX86Windows)" Condition="Exists($(LibraryFileNameX86Windows))">
       <Link>whisper.dll</Link>
       <PackagePath>runtimes/win-x86/native</PackagePath>
       <Pack>true</Pack>
-      <CopyToOutputDirectory Condition="$(IsHostX86Windows)">PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
   </ItemGroup>

@@ -1,0 +1,9 @@
+<Project>
+  <!-- TODO: Generate this file via build to let developers just use the dotnet CLI in this folder instead of running the entire build -->
+  <PropertyGroup>
+    <Configuration Condition="$(Configuration)==''">Debug</Configuration>
+    <LibraryFileNameHost>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.dll</LibraryFileNameHost>
+    <LibraryPdbNameHost>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.pdb</LibraryPdbNameHost>
+  </PropertyGroup>
+
+</Project>
