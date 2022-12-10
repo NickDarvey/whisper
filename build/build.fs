@@ -312,6 +312,10 @@ module private Actions =
         {|
           Env = EnvMap.ofMap env
           Bin = out </> Platform.toString targetPlatform
+          Architecture =
+            match targetPlatform.Architecture with
+            | X86 -> "win32"
+            | X64 -> "x64"
         |}
 
     let configure (targetPlatform : Platform) =
@@ -321,7 +325,6 @@ module private Actions =
 
         let args = [
           $"-B{toolchain.Bin}"
-          $"-DCMAKE_MAKE_PROGRAM={Ninja.exe.Value}"
           $"-DCMAKE_CONFIGURATION_TYPES={String.Join (';', Configuration.all |> Seq.map Configuration.toString)}"
           $"-DSWIG_EXECUTABLE={Swig.exe.Value}"
           $"-DDOTNET_WRAPPER_FILE_NAME={dotnet.wrapperFileName}"
@@ -331,7 +334,11 @@ module private Actions =
         { p with
             ToolPath = CMake.exe.Value
             SourceDirectory = source
-            Generator = "Ninja Multi-Config"
+            // I tried Ninja but it resulted in woeful performance of Whisper.
+            // I'm sure it's not Ninja's fault, but the defaults with the Visual Studio generator work well and I can't be bothered investigating.
+            // Generator = "Ninja Multi-Config"
+            Generator = "Visual Studio 17 2022" //
+            Platform = toolchain.Architecture
             AdditionalArgs = String.concat " " args
         })
       |> CreateProcess.withEnvironmentMap toolchain.Env

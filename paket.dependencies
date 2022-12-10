@@ -13,7 +13,6 @@ group build
   nuget Fake.Tools.Git ~> 6 prerelease
   nuget MAB.DotIgnore
   http https://github.com/Kitware/CMake/releases/download/v3.25.1/cmake-3.25.1-windows-x86_64.zip
-  http https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-win.zip
   http http://prdownloads.sourceforge.net/swig/swigwin-4.1.1.zip
 
 group dotnet
