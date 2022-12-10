@@ -96,12 +96,21 @@ module private Solution =
         | arch -> invalidOp $"{arch} is an unsupported architecture"
     }
 
-    /// All supported (target) platforms for this solution.
-    let targets =
-      Set [
-        { OS = Windows ; Architecture = X86 }
-        { OS = Windows ; Architecture = X64 }
-      ]
+    /// All supported (target) platforms for this solution as a type map.
+    type Targets<'a> =
+      {
+        ``x86-windows`` : 'a
+        ``x64-windows`` : 'a
+      }
+
+      member this.all () = [ this.``x86-windows`` ; this.``x64-windows`` ]
+
+    let Targets = {
+      ``x86-windows`` = { OS = Windows ; Architecture = X86 }
+      ``x64-windows`` = { OS = Windows ; Architecture = X64 }
+    }
+
+    let targets = Set <| Targets.all ()
 
   module Path =
     let private toUnixDirectorySeperators = String.replace "\"" "/"
@@ -389,20 +398,21 @@ module private Actions =
         </> Configuration.toString configuration
         </> match platform.OS with
             | Windows -> $"{cpp.dotnet.libraryName}.dll"
-      // https://github.com/fsprojects/FAKE/issues/2392#issuecomment-530572846
+
+      let targets : Platform.Targets<_> = {
+        ``x86-windows`` =
+          "LibraryFileNameX86Windows",
+          getLibraryFileName Platform.Targets.``x86-windows``
+        ``x64-windows`` =
+          "LibraryFileNameX64Windows",
+          getLibraryFileName Platform.Targets.``x64-windows``
+      }
 
       [
-        "LibraryFileNameX64Windows",
-        getLibraryFileName { OS = Windows ; Architecture = X64 }
-
-        "IsHostX64Windows",
-        string (Platform.host = { OS = Windows ; Architecture = X64 })
-
-        "LibraryFileNameX86Windows",
-        getLibraryFileName { OS = Windows ; Architecture = X86 }
-
-        "IsHostX86Windows",
-        string (Platform.host = { OS = Windows ; Architecture = X86 })
+        "LibraryFileNameHost", getLibraryFileName Platform.host
+        "LibraryPdbNameHost",
+        (Path.changeExtension ".pdb" <| getLibraryFileName Platform.host)
+        yield! targets.all ()
       ]
 
 
