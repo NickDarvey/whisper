@@ -17,6 +17,12 @@
       <Pack>false</Pack>
       <Visible>false</Visible>
     </Content>
+    <Content Include="$(OpenBLASFileNameHost)">
+      <LinkBase>.</LinkBase>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Pack>false</Pack>
+      <Visible>false</Visible>
+    </Content>
     <!-- For package -->
     <Content Include="$(LibraryFileNameX64Windows)" Condition="Exists($(LibraryFileNameX64Windows))">
       <Link>whisper.dll</Link>

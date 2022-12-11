@@ -170,11 +170,11 @@ public class Program
         Console.WriteLine($"Skipping empty file {inputPath}");
         continue;
       }
-      if (File.Exists(outputPath))
-      {
-        Console.WriteLine($"Skipping existing transcription {inputPath}");
-        continue;
-      }
+      // if (File.Exists(outputPath))
+      // {
+      //   Console.WriteLine($"Skipping existing transcription {inputPath}");
+      //   continue;
+      // }
       //CompareProcessMethods(file);
 
       Process(context, parameters, inputPath, outputPath);
@@ -182,6 +182,8 @@ public class Program
       Console.WriteLine($"Processed {inputPath}");
       Console.WriteLine($"========================");
     }
+
+    Console.WriteLine(whisper_print_system_info());
 
     whisper_free(context);
 

@@ -113,8 +113,6 @@ module private Solution =
     let targets = Set <| Targets.all ()
 
   module Path =
-    let private toUnixDirectorySeperators = String.replace "\"" "/"
-    let asdf = Path.convertWindowsToCurrentPath
     let root = __SOURCE_DIRECTORY__ </> ".."
     let ignored = IgnoreList (root </> ".gitignore")
 
@@ -267,6 +265,33 @@ module private Tools =
          |> GlobbingPattern.create
          |> Seq.exactlyOne)
 
+  module Vcpkg =
+    let private folder =
+      lazy
+        (Paket.files </> "**" </> "microsoft" </> "vcpkg"
+         |> GlobbingPattern.create
+         |> Seq.exactlyOne)
+
+    let exe = lazy (folder.Value </> "vcpkg.exe")
+
+    let toolchain =
+      lazy (folder.Value </> "scripts" </> "buildsystems" </> "vcpkg.cmake")
+
+    // https://github.com/microsoft/vcpkg/blob/master/docs/users/triplets.md
+    let toTriplet platform =
+      match platform with
+      | { OS = Windows ; Architecture = X64 } -> "x64-windows"
+      | { OS = Windows ; Architecture = X86 } -> "x86-windows"
+
+  /// Can be used to set the PATH environment variable so that the above tools are available to other tools.
+  let PATH =
+    lazy
+      (Environment.GetEnvironmentVariable "PATH"
+       |> String.split IO.Path.PathSeparator
+       |> List.append [ Swig.exe.Value ; CMake.exe.Value ; Vcpkg.exe.Value ]
+       |> List.map Path.getDirectory
+       |> String.separated $"%c{IO.Path.PathSeparator}")
+
 /// The build actions for this solution.
 module private Actions =
 
@@ -335,7 +360,9 @@ module private Actions =
         let args = [
           $"-B{toolchain.Bin}"
           $"-DCMAKE_CONFIGURATION_TYPES={String.Join (';', Configuration.all |> Seq.map Configuration.toString)}"
-          $"-DSWIG_EXECUTABLE={Swig.exe.Value}"
+          $"-DCMAKE_TOOLCHAIN_FILE={Vcpkg.toolchain.Value}"
+          $"-DVCPKG_TARGET_TRIPLET={Vcpkg.toTriplet targetPlatform}"
+          $"-DWHISPER_SUPPORT_OPENBLAS=OFF"
           $"-DDOTNET_WRAPPER_FILE_NAME={dotnet.wrapperFileName}"
           $"-DDOTNET_LIBRARY_NAME={dotnet.libraryName}"
         ]
@@ -371,6 +398,13 @@ module private Actions =
 
     let clean () = Directory.delete out
 
+    let vcpkg args =
+      CreateProcess.fromRawCommand Vcpkg.exe.Value args
+      // CreateProcess.fromRawCommandLine "cmd" "/C \"echo %PATH%\""
+      |> CreateProcess.setEnvironmentVariable "PATH" PATH.Value
+      |> CreateProcess.ensureExitCode
+      |> Proc.run
+      |> ignore
 
   module dotnet =
     let relative = "src" </> "dotnet"
@@ -621,6 +655,8 @@ let init () =
 
     for (platform, configuration) in Seq.allPairs platforms configurations do
       Actions.cpp.build platform configuration)
+
+  Target.create "cpp:vcpkg" (fun p -> Actions.cpp.vcpkg p.Context.Arguments)
 
   Target.create "dotnet:clean" (fun p -> Actions.dotnet.clean ())
 

@@ -3,6 +3,7 @@
   <PropertyGroup>
     <Configuration Condition="$(Configuration)==''">Debug</Configuration>
     <LibraryFileNameHost>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.dll</LibraryFileNameHost>
+    <OpenBLASFileNameHost>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\openblas.dll</OpenBLASFileNameHost>
     <LibraryPdbNameHost>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.pdb</LibraryPdbNameHost>
   </PropertyGroup>
 

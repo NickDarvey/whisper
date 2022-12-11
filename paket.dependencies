@@ -14,6 +14,7 @@ group build
   nuget MAB.DotIgnore
   http https://github.com/Kitware/CMake/releases/download/v3.25.1/cmake-3.25.1-windows-x86_64.zip
   http http://prdownloads.sourceforge.net/swig/swigwin-4.1.1.zip
+  git http://github.com/microsoft/vcpkg.git 2022.11.14 build: "bootstrap-vcpkg.bat", OS: windows
 
 group dotnet
   source https://api.nuget.org/v3/index.json

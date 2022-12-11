@@ -49,7 +49,7 @@ let private CallCMake toolPath binaryDir args timeout =
     CreateProcess.fromRawCommandLine cmakeExe arguments
     |> CreateProcess.withWorkingDirectory binaryDir
     |> CreateProcess.withTimeout (timeout)
-    |> CreateProcess.redirectOutput
+  // |> CreateProcess.redirectOutput
 
   result
 

@@ -11,6 +11,11 @@
    - [Visual Studio 2022 with a C++ workload](https://learn.microsoft.com/en-us/cpp/build/vscpp-step-0-installation?view=msvc-170)
 
 ## TODO
+- [ ] `runtime.csproj` native dependencies aren't copied into the right place when using `build build`, but are after running `dotnet build src/dotnet`.
+   It seems to ignore the `LinkBase` when running `build build.` I think this may be because of Fake.Msbuild's poor escaping of the command line argument `LibraryFileNameHost`.
+
+   A solution may be to code around the escaping it is doing.
+
 - [ ] You have to run `build` twice because the first time it generates a whisper.dll that depends on the other whisper.dll.
 
    **Repro**
