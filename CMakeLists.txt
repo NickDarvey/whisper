@@ -24,10 +24,12 @@ add_subdirectory(ext/whisper.cpp)
 find_library(OPENBLAS_LIB
   NAMES openblas libopenblas
 )
-cmake_path(REMOVE_FILENAME OPENBLAS_LIB OUTPUT_VARIABLE OPENBLAS_INCLUDE_DIR)
-cmake_path(APPEND OPENBLAS_INCLUDE_DIR ".." ".." "include" "openblas")
-cmake_path(NORMAL_PATH OPENBLAS_INCLUDE_DIR)
-target_include_directories(whisper PRIVATE "${OPENBLAS_INCLUDE_DIR}")
+if (OPENBLAS_LIB)
+  cmake_path(REMOVE_FILENAME OPENBLAS_LIB OUTPUT_VARIABLE OPENBLAS_INCLUDE_DIR)
+  cmake_path(APPEND OPENBLAS_INCLUDE_DIR ".." ".." "include" "openblas")
+  cmake_path(NORMAL_PATH OPENBLAS_INCLUDE_DIR)
+  target_include_directories(whisper PRIVATE "${OPENBLAS_INCLUDE_DIR}")
+endif()
 # End workaround for making OpenBLAS headers available to Whisper.
 
 add_subdirectory(src/dotnet/runtime)

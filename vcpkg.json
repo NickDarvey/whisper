@@ -1,5 +1,5 @@
 {
   "name": "whisper",
   "version-string": "1.0.0",
-  "dependencies": ["openblas"]
+  "dependencies": []
 }
