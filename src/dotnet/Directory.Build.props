@@ -2,9 +2,9 @@
   <!-- TODO: Generate this file via build to let developers just use the dotnet CLI in this folder instead of running the entire build -->
   <PropertyGroup>
     <Configuration Condition="$(Configuration)==''">Debug</Configuration>
-    <LibraryFileNameHost>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.dll</LibraryFileNameHost>
-    <!-- <OpenBLASFileNameHost>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\openblas.dll</OpenBLASFileNameHost> -->
-    <LibraryPdbNameHost>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.pdb</LibraryPdbNameHost>
+    <LibraryFileName>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.dll</LibraryFileName>
+    <SymbolsFileName>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.pdb</SymbolsFileName>
+    <!-- <OpenBLASFileName>C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\openblas.dll</OpenBLASFileName> -->
   </PropertyGroup>
 
 </Project>

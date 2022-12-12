@@ -5,19 +5,19 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- For local development -->
-    <Content Include="$(LibraryFileNameHost)">
+    <Content Include="$(LibraryFileName)">
       <LinkBase>.</LinkBase>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Pack>false</Pack>
       <Visible>false</Visible>
     </Content>
-    <Content Include="$(LibraryPdbNameHost)" Condition="Exists($(LibraryPdbNameHost))">
+    <Content Include="$(SymbolsFileName)">
       <LinkBase>.</LinkBase>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Pack>false</Pack>
       <Visible>false</Visible>
     </Content>
-    <!-- <Content Include="$(OpenBLASFileNameHost)">
+    <!-- <Content Include="$(OpenBLASFileName)">
       <LinkBase>.</LinkBase>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Pack>false</Pack>

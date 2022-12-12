@@ -8,6 +8,14 @@ project(Whisper VERSION 1.0 LANGUAGES CXX)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Bundle the whisper library inside the wrapper library")
 
+# Generate PDBs even in Release configuration.
+if (MSVC)
+  add_compile_options("$<$<CONFIG:Release>:/Zi>")
+  add_link_options("$<$<CONFIG:Release>:/DEBUG>")
+  add_link_options("$<$<CONFIG:Release>:/OPT:REF>")
+  add_link_options("$<$<CONFIG:Release>:/OPT:ICF>")
+endif()
+
 add_subdirectory(ext/whisper.cpp)
 
 # Workaround for making OpenBLAS headers available to Whisper.
