@@ -424,31 +424,7 @@ module private Actions =
       | Debug -> DotNet.BuildConfiguration.Debug
       | Release -> DotNet.BuildConfiguration.Release
 
-    let private props configuration =
-      let getLibraryFileName platform =
-        cpp.out
-        </> Platform.toString platform
-        </> runtime
-        </> Configuration.toString configuration
-        </> match platform.OS with
-            | Windows -> $"{cpp.dotnet.libraryName}.dll"
-
-      let targets : Platform.Targets<_> = {
-        ``x86-windows`` =
-          "LibraryFileNameX86Windows",
-          getLibraryFileName Platform.Targets.``x86-windows``
-        ``x64-windows`` =
-          "LibraryFileNameX64Windows",
-          getLibraryFileName Platform.Targets.``x64-windows``
-      }
-
-      [
-        "LibraryFileNameHost", getLibraryFileName Platform.host
-        "LibraryPdbNameHost",
-        (Path.changeExtension ".pdb" <| getLibraryFileName Platform.host)
-        yield! targets.all ()
-      ]
-
+    let private props configuration = []
 
     let clean () =
       File.deleteAll (

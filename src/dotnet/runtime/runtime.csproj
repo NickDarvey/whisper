@@ -4,37 +4,14 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <!-- For local development -->
-    <Content Include="$(LibraryFileName)">
+    <Content Include="@(NativeDependency)" Condition="Exists(@(NativeDependency))">
       <LinkBase>.</LinkBase>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Pack>false</Pack>
       <Visible>false</Visible>
-    </Content>
-    <Content Include="$(SymbolsFileName)">
-      <LinkBase>.</LinkBase>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Pack>false</Pack>
-      <Visible>false</Visible>
-    </Content>
-    <!-- <Content Include="$(OpenBLASFileName)">
-      <LinkBase>.</LinkBase>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <Pack>false</Pack>
-      <Visible>false</Visible>
-    </Content> -->
-    <!-- For package -->
-    <Content Include="$(LibraryFileNameX64Windows)" Condition="Exists($(LibraryFileNameX64Windows))">
-      <Link>whisper.dll</Link>
-      <PackagePath>runtimes/win-x64/native</PackagePath>
+      <!-- For NuGet package -->
+      <PackagePath>runtimes/%(RuntimeIdentifier)/native</PackagePath>
       <Pack>true</Pack>
-      <Visible>false</Visible>
-    </Content>
-    <Content Include="$(LibraryFileNameX86Windows)" Condition="Exists($(LibraryFileNameX86Windows))">
-      <Link>whisper.dll</Link>
-      <PackagePath>runtimes/win-x86/native</PackagePath>
-      <Pack>true</Pack>
-      <Visible>false</Visible>
+      <!-- For local development -->
+      <CopyToOutputDirectory Condition="$(NETCoreSdkPortableRuntimeIdentifier) == '%(RuntimeIdentifier)'">PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <Import Project="..\..\..\.paket\Paket.Restore.targets" />
