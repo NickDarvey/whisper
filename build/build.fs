@@ -455,10 +455,18 @@ module private Actions =
         GlobbingPattern.create (Path.root </> relative </> "**/*.g.*")
       )
 
-      let res = DotNet.exec common "clean" sln
+      for config in Configuration.all do
+        let res =
+          DotNet.exec
+            (fun x ->
+              { x.WithCommon (common) with
+                  CustomParams = Some $"--configuration {cfg config}"
+              })
+            "clean"
+            sln
 
-      if not res.OK then
-        failwith <| failwith $"{String.toLines res.Errors}"
+        if not res.OK then
+          failwith <| failwith $"{String.toLines res.Errors}"
 
     let restore () =
       DotNet.restore (fun x -> x.WithCommon common) sln
