@@ -483,7 +483,7 @@ module private Actions =
         (fun x ->
           { x with
               Common = common x.Common
-              // NoRestore = true
+              NoRestore = true
               Configuration = cfg configuration
               MSBuildParams =
                 { x.MSBuildParams with
@@ -667,17 +667,15 @@ let init () =
 
   Target.create "clean" ignore
   Target.create "restore" ignore
-  Target.create "generate" ignore
   Target.create "build" ignore
   Target.create "test" ignore
 
   "clean" <== [ "cpp:clean" ; "dotnet:clean" ]
-  "restore" <== [ "dotnet:restore" ]
-  "generate" <== [ "cpp:configure" ; "dotnet:generate" ]
+  "restore" <== [ "dotnet:restore"; "cpp:configure" ; "dotnet:generate" ]
   "build" <== [ "dotnet:build" ; "cpp:build" ]
   "test" <== [ "dotnet:test" ]
 
-  "clean" ?=> "restore" ==> "generate" ==> "build" ==> "test"
+  "clean" ?=> "restore" ==> "build" ==> "test"
 
 
 
