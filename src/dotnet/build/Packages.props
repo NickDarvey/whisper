@@ -1,0 +1,33 @@
+<Project>
+  <PropertyGroup>
+    <Authors>github.com/ggerganov;github.com/nickdarvey</Authors>
+    <PackageProjectUrl>https://github.com/nickdarvey/whisper</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/nickdarvey/whisper</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>High-performance inference of OpenAI's Whisper automatic speech recognition (ASR) model.</Description>
+    <PackageIcon>logo.png</PackageIcon>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <MinClientVersion>3.0</MinClientVersion>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <VersionPrefix>0.0.0</VersionPrefix>
+    <ContinuousIntegrationBuild Condition="$(Configuration) == 'Release'">true</ContinuousIntegrationBuild>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <!--
+      Warning: 
+        .paket/Paket.Restore.targets(371,5): warning NU5128: Some target frameworks declared in the dependencies group of the nuspec and the lib/ref folder do not have exact matches in the other location. Consult the list of actions below: [C:\Users\nickd\source\repos\whisper\src\dotnet\runtime\runtime.csproj]
+        .paket/Paket.Restore.targets(371,5): warning NU5128: - Add lib or ref assemblies for the netstandard2.0 target framework [C:\Users\nickd\source\repos\whisper\src\dotnet\runtime\runtime.csproj]
+      Justification:
+        The lib assembly _does_ exist in the nupkg under 'lib/netstandard2.0/runtime.dll' 🤷
+    -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+  <!-- <ItemGroup>
+      <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
+    </ItemGroup> -->
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)/logo.png" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+</Project>

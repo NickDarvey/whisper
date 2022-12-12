@@ -1,12 +1,10 @@
 <Project>
-  <!-- TODO: Generate this file via build to let developers just use the dotnet CLI in this folder instead of running the entire build -->
   <PropertyGroup>
-    <Configuration Condition="$(Configuration)==''">Debug</Configuration>
+    <LangVersion>Latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
-
-  <ItemGroup>
-    <NativeDependency RuntimeIdentifier="win-x64" Include="C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.dll"></NativeDependency>
-    <NativeDependency RuntimeIdentifier="win-x64" Include="C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.pdb"></NativeDependency>
-  </ItemGroup>
-
+  <!-- TODO: Generate this file via build and move it to the out/ folder because the build script knows the paths it defines. -->
+  <Import Project="./build/NativeDependencies.props" />
+  <Import Project="./build/Packages.props" />
 </Project>

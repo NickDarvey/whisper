@@ -2,6 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Whisper.Runtime</PackageId>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="@(NativeDependency)" Condition="Exists(@(NativeDependency))">

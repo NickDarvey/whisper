@@ -14,3 +14,7 @@
 - [ ] Generate `src\dotnet\Directory.Build.props` via the build script's generate target.
 
    Right now the path to the built libraries are hard-coded but they're decided by the build so this file should be generated.
+
+- [ ] Set a version number on the DLL
+
+   https://stackoverflow.com/a/36731183/1259408

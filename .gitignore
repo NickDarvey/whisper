@@ -4,6 +4,9 @@ samples/
 # Build artifacts
 out/
 
+# Distribution artifacts
+dist/
+
 # .NET builds
 obj/
 bin/

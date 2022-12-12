@@ -115,6 +115,7 @@ module private Solution =
   module Path =
     let root = __SOURCE_DIRECTORY__ </> ".."
     let ignored = IgnoreList (root </> ".gitignore")
+    let dist = root </> "dist"
 
 /// Tools used by this solution (which could probably be moved elsewhere).
 [<AutoOpen>]
@@ -426,6 +427,9 @@ module private Actions =
 
     let private props configuration = []
 
+    let private dist configuration =
+      Path.dist </> Configuration.toString configuration </> "dotnet"
+
     let clean () =
       File.deleteAll (
         GlobbingPattern.create (Path.root </> relative </> "**/*.g.*")
@@ -443,6 +447,9 @@ module private Actions =
 
         if not res.OK then
           failwith <| failwith $"{String.toLines res.Errors}"
+
+        Directory.delete (dist config)
+
 
     let restore () =
       DotNet.restore (fun x -> x.WithCommon common) sln
@@ -504,6 +511,18 @@ module private Actions =
                 { x.MSBuildParams with
                     Properties = props configuration
                 }
+          })
+        sln
+
+    let pack configuration =
+      DotNet.pack
+        (fun x ->
+          { x with
+              Common = common x.Common
+              Configuration = cfg configuration
+              NoRestore = true
+              NoBuild = true
+              OutputPath = Some (dist configuration)
           })
         sln
 
@@ -648,6 +667,7 @@ let init () =
 
   Target.create "dotnet:generate" (fun p -> Actions.dotnet.generate ())
 
+
   Target.createWithArgs<Args.dotnet.build> "dotnet:build" (fun args ->
     let configurations =
       Args.parseConfigurations (fun p ->
@@ -664,18 +684,30 @@ let init () =
     for configuration in configurations do
       Actions.dotnet.test configuration)
 
+  Target.createWithArgs<Args.dotnet.build> "dotnet:pack" (fun args ->
+    let configurations =
+      Args.parseConfigurations (fun p ->
+        args.PostProcessResults (Args.dotnet.build.Configuration, p))
+
+    for configuration in configurations do
+      Actions.dotnet.pack configuration)
 
   Target.create "clean" ignore
   Target.create "restore" ignore
   Target.create "build" ignore
   Target.create "test" ignore
+  Target.create "pack" ignore
 
   "clean" <== [ "cpp:clean" ; "dotnet:clean" ]
-  "restore" <== [ "dotnet:restore"; "cpp:configure" ; "dotnet:generate" ]
+  "restore" <== [ "dotnet:restore" ; "cpp:configure" ; "dotnet:generate" ]
   "build" <== [ "dotnet:build" ; "cpp:build" ]
   "test" <== [ "dotnet:test" ]
+  "pack" <== [ "dotnet:pack" ]
 
-  "clean" ?=> "restore" ==> "build" ==> "test"
+  let _ = "clean" ?=> "restore" ==> "build"
+  let _ = "build" ==> "test"
+  let _ = "build" ==> "pack"
+  ()
 
 
 
