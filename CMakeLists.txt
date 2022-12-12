@@ -6,8 +6,7 @@ MESSAGE(STATUS "Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
 
 project(Whisper VERSION 1.0 LANGUAGES CXX)
 
-# Bundle the whisper library inside the wrapper library
-set(BUILD_SHARED_LIBS OFF)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Bundle the whisper library inside the wrapper library")
 
 add_subdirectory(ext/whisper.cpp)
 
