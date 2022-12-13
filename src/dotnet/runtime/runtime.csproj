@@ -5,7 +5,7 @@
     <PackageId>Whisper.Runtime</PackageId>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="@(NativeDependency)" Condition="Exists(@(NativeDependency))">
+    <Content Include="@(NativeDependency->Exists())">
       <LinkBase>.</LinkBase>
       <Visible>false</Visible>
       <!-- For NuGet package -->

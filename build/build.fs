@@ -213,7 +213,12 @@ module private Tools =
          |> GlobbingPattern.create
          |> Seq.exactlyOne)
 
-    type LanguageOptions = | CSharp of {| DllImport : string |}
+    type LanguageOptions =
+      | CSharp of
+        {|
+          DllImport : string
+          Namespace : string
+        |}
 
     type InputOptions = | InputFiles of string list
 
@@ -243,6 +248,7 @@ module private Tools =
           args
           |> Arguments.append [ "-csharp" ]
           |> Arguments.append [ "-dllimport" ; opts.DllImport ]
+          |> Arguments.append [ "-namespace" ; opts.Namespace ]
 
       let args =
         match opts.Input with
@@ -337,6 +343,8 @@ module private Actions =
       let wrapperFileName = "Whisper.g.cxx"
       /// The name for the library
       let libraryName = "whisper"
+      /// The namespace for the runtime package
+      let runtimeNamespace = "Whisper.Runtime"
 
     let private getToolchain (targetPlatform : Platform) =
       match Platform.host, targetPlatform with
@@ -464,7 +472,12 @@ module private Actions =
 
       Swig.run
         {
-          Language = Swig.CSharp {| DllImport = cpp.dotnet.libraryName |}
+          Language =
+            Swig.CSharp
+              {|
+                DllImport = cpp.dotnet.libraryName
+                Namespace = cpp.dotnet.runtimeNamespace
+              |}
           EnableCppProcessing = true
           OutputFile = runtime </> cpp.dotnet.wrapperFileName
           OutputDirectory = files.FullName

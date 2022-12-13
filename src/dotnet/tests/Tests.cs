@@ -1,5 +1,6 @@
 
-using static Whisper;
+using Whisper.Runtime;
+using static Whisper.Runtime.WhisperRuntime;
 
 public class UnitTest1
 {

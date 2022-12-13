@@ -4,7 +4,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using NAudio.Wave;
-using static Whisper;
+using Whisper.Runtime;
+using static Whisper.Runtime.WhisperRuntime;
 
 public class Program
 {
@@ -85,12 +86,12 @@ public class Program
   }
 
 
-  private static void Process(SWIGTYPE_p_whisper_context context, whisper_full_params parameters, string inputPath, string outputPath)
+  private static void Process(whisper_context context, whisper_full_params parameters, string inputPath, string outputPath)
   {
 
-    using (var mp3s = new Mp3FileReader(inputPath))
-    using (var wavs = Convert(mp3s))
-    // using (var wavs = new WaveFileReader(inputPath))
+    // using (var mp3s = new Mp3FileReader(inputPath))
+    // using (var wavs = Convert(mp3s))
+    using (var wavs = new WaveFileReader(inputPath))
     using (var writer = new StreamWriter(outputPath))
     // using (var wavreader = new WaveFileReader(filePath))
     {
@@ -142,7 +143,8 @@ public class Program
     //   .Order();
 
     var files = new[] {
-      """C:\Users\nickd\source\repos\whisper\samples\1487839\Making_Sense_107_Is_Life_Actually_Worth_Living_Full_7-6-22.mp3""",
+      // """C:\Users\nickd\source\repos\whisper\samples\1487839\Making_Sense_107_Is_Life_Actually_Worth_Living_Full_7-6-22.mp3""",
+      """C:\Users\nickd\source\repos\whisper\samples\jfk1.wav""",
     };
 
 

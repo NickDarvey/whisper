@@ -1,3 +1,7 @@
 {
-  "recommendations": ["Ionide.Ionide-fsharp", "Ionide.Ionide-Paket"]
+  "recommendations": [
+    "Ionide.Ionide-fsharp",
+    "Ionide.Ionide-Paket",
+    "sorn.swiglang"
+  ]
 }
