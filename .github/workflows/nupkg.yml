@@ -1,7 +1,7 @@
-name: Publish
+name: Build
 
 on:
-  push:
+  pullrequest:
     branches:
     - trunk
     
@@ -25,6 +25,3 @@ jobs:
 
     - name: Build and pack 
       run: ./build pack
-
-    - name: Publish
-      run: dotnet nuget push --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
