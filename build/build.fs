@@ -460,7 +460,13 @@ module private Actions =
 
 
     let restore () =
-      DotNet.restore (fun x -> x.WithCommon common) sln
+      DotNet.restore (fun x -> {
+        x.WithCommon common with 
+          MSBuildParams = {
+            x.MSBuildParams with 
+              Properties = x.MSBuildParams.Properties @ [("Configuration", "Release"); ("Platform","Any CPU")]
+          }
+      }) sln
 
     let generate () =
 
