@@ -263,11 +263,6 @@ HTTP
     cmake-3.25.1-windows-x86_64.zip (/Kitware/CMake/releases/download/v3.25.1/cmake-3.25.1-windows-x86_64.zip)
   remote: http://prdownloads.sourceforge.net
     swigwin-4.1.1.zip (/swig/swigwin-4.1.1.zip)
-GIT
-  remote: http://github.com/microsoft/vcpkg.git
-     (6f7ffeb18f99796233b958aaaf14ec7bd4fb64b2)
-      build: bootstrap-vcpkg.bat
-      os: windows
 GROUP dotnet
 STORAGE: NONE
 RESTRICTION: || (== net7.0) (== netstandard2.0)
@@ -332,3 +327,11 @@ NUGET
       NETStandard.Library (>= 1.6.1)
       xunit.extensibility.core (2.4.2)
     xunit.runner.visualstudio (2.4.5)
+
+GROUP vcpkg
+
+GIT
+  remote: http://github.com/microsoft/vcpkg.git
+     (6f7ffeb18f99796233b958aaaf14ec7bd4fb64b2)
+      build: bootstrap-vcpkg.bat
+      os: windows
