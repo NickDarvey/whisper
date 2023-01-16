@@ -20,6 +20,7 @@ jobs:
 
     - uses: ilammy/msvc-dev-cmd@v1
       with: 
+        # must match build.fs
         toolset: 14.34
 
     - name: Setup .NET
