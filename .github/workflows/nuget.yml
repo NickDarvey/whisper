@@ -15,8 +15,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
     - uses: ilammy/msvc-dev-cmd@v1
-      with 
+      with: 
         toolset: 14.34
 
     - name: Setup .NET
@@ -24,11 +27,6 @@ jobs:
       with:
         dotnet-version: 7.0.x
 
-    - name: init submodule
-      run: git submodule init
-
-    - name: restore submodule
-      run: git submodule update
 
     - name: Build and pack 
       run: ./build pack
