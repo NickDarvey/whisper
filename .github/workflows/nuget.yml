@@ -24,7 +24,7 @@ jobs:
       uses: actions/setup-dotnet@v3
 
     - name: Build and pack 
-      run: ./build pack --configuration Release --platform x64-windows --platform x86-window
+      run: ./build pack --configuration Release --platform x64-windows --platform x86-windows
 
     - name: Publish
       run: dotnet nuget push --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
