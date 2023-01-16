@@ -4,10 +4,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <NativeDependency RuntimeIdentifier="win-x64" Include="C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.dll"></NativeDependency>
-    <NativeDependency RuntimeIdentifier="win-x64" Include="C:\Users\nickd\source\repos\whisper\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.pdb"></NativeDependency>
-    <NativeDependency RuntimeIdentifier="win-x86" Include="C:\Users\nickd\source\repos\whisper\out\x86-windows\src\dotnet\runtime\$(Configuration)\whisper.dll"></NativeDependency>
-    <NativeDependency RuntimeIdentifier="win-x86" Include="C:\Users\nickd\source\repos\whisper\out\x86-windows\src\dotnet\runtime\$(Configuration)\whisper.pdb"></NativeDependency>
+    <NativeDependency RuntimeIdentifier="win-x64" Include="..\..\..\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.dll"></NativeDependency>
+    <NativeDependency RuntimeIdentifier="win-x64" Include="..\..\..\out\x64-windows\src\dotnet\runtime\$(Configuration)\whisper.pdb"></NativeDependency>
+    <NativeDependency RuntimeIdentifier="win-x86" Include="..\..\..\out\x86-windows\src\dotnet\runtime\$(Configuration)\whisper.dll"></NativeDependency>
+    <NativeDependency RuntimeIdentifier="win-x86" Include="..\..\..\out\x86-windows\src\dotnet\runtime\$(Configuration)\whisper.pdb"></NativeDependency>
   </ItemGroup>
 
 </Project>
