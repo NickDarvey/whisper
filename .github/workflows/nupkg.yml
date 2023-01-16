@@ -1,7 +1,7 @@
 name: Build
 
 on:
-  pullrequest:
+  pull_request:
     branches:
     - trunk
     
