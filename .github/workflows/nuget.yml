@@ -31,7 +31,7 @@ jobs:
       run: git submodule update
 
     - name: Build and pack 
-      run: ./build.sh
+      run: ./build pack
 
     - name: Publish
       run: dotnet nuget push --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
