@@ -511,6 +511,7 @@ module private Actions =
               Common = common x.Common
               NoRestore = true
               Configuration = cfg configuration
+              Runtime = None
               MSBuildParams =
                 { x.MSBuildParams with
                     Properties = props configuration
