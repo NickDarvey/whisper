@@ -13,3 +13,6 @@ bin/
 
 # Paket
 paket-files/
+
+# Logging 
+**/*.binlog

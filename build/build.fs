@@ -460,7 +460,13 @@ module private Actions =
 
 
     let restore () =
-      DotNet.restore (fun x -> x.WithCommon common) sln
+      DotNet.restore (fun x -> {
+        x.WithCommon common with 
+          MSBuildParams = {
+            x.MSBuildParams with 
+              Properties = x.MSBuildParams.Properties @ [("Configuration", "Release"); ("Platform","Any CPU")]
+          }
+      }) sln
 
     let generate () =
 
@@ -504,10 +510,12 @@ module private Actions =
           { x with
               Common = common x.Common
               NoRestore = true
-              Configuration = cfg configuration
+              Configuration = cfg configuration 
               MSBuildParams =
                 { x.MSBuildParams with
                     Properties = props configuration
+                    DisableInternalBinLog = true
+                    BinaryLoggers = Some ["dotnetbuild.binlog"]
                 }
           })
         sln

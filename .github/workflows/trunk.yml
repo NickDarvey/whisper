@@ -1,0 +1,38 @@
+name: Pack and publish
+
+on:
+  push:
+    branches:
+    - trunk
+    
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - uses: ilammy/msvc-dev-cmd@v1
+      with: 
+        # must match build.fs
+        toolset: 14.34
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+
+    - name: Build and pack 
+      run: ./build pack --configuration Release --platform x64-windows --platform x86-windows
+
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: build-log
+        path: |
+          ./dotnetbuild.binlog
+          dist
+
+    - name: Publish
+      run: dotnet nuget push --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
