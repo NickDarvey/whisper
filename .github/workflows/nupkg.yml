@@ -30,4 +30,6 @@ jobs:
       if: always()
       with:
         name: build-log
-        path: ./dotnetbuild.binlog
+        path: |
+          ./dotnetbuild.binlog
+          dist
