@@ -510,11 +510,12 @@ module private Actions =
           { x with
               Common = common x.Common
               NoRestore = true
-              Configuration = cfg configuration
-              Runtime = None
+              Configuration = cfg configuration 
               MSBuildParams =
                 { x.MSBuildParams with
                     Properties = props configuration
+                    DisableInternalBinLog = true
+                    BinaryLoggers = Some ["dotnetbuild.binlog"]
                 }
           })
         sln

@@ -25,3 +25,8 @@ jobs:
 
     - name: Build and pack 
       run: ./build pack --configuration Release --platform x64-windows --platform x86-windows
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: build-log
+        path: ./dotnetbuild.binlog
