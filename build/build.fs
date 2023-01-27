@@ -520,13 +520,15 @@ module private Actions =
           })
         sln
 
-    let test configuration =
+    let test configuration testResultsDirectory =
       DotNet.test
         (fun x ->
           { x with
               Common = common x.Common
               NoBuild = true
               NoRestore = true
+              Logger = testResultsDirectory |> Option.map (fun _ -> "trx")
+              ResultsDirectory = testResultsDirectory
               Configuration = cfg configuration
               MSBuildParams =
                 { x.MSBuildParams with
@@ -646,6 +648,17 @@ module private Args =
           match s with
           | Configuration _ -> "specify zero or more configurations"
 
+    [<RequireQualifiedAccess>]
+    type test =
+      | Configuration of configuration : string
+      | Results of path : string
+
+      interface IArgParserTemplate with
+        member s.Usage =
+          match s with
+          | Configuration _ -> "specify zero or more configurations"
+          | Results _ -> "specify a directory for test results"
+
 
 
 // Target names like {subject}:{action}
@@ -697,13 +710,13 @@ let init () =
     for configuration in configurations do
       Actions.dotnet.build configuration)
 
-  Target.createWithArgs<Args.dotnet.build> "dotnet:test" (fun args ->
+  Target.createWithArgs<Args.dotnet.test> "dotnet:test" (fun args ->
     let configurations =
       Args.parseConfigurations (fun p ->
-        args.PostProcessResults (Args.dotnet.build.Configuration, p))
+        args.PostProcessResults (Args.dotnet.test.Configuration, p))
 
     for configuration in configurations do
-      Actions.dotnet.test configuration)
+      Actions.dotnet.test configuration (args.TryGetResult Args.dotnet.test.Results))
 
   Target.createWithArgs<Args.dotnet.build> "dotnet:pack" (fun args ->
     let configurations =

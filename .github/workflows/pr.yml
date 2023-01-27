@@ -27,9 +27,21 @@ jobs:
       run: ./build pack --configuration Release --platform x64-windows --platform x86-windows
 
     - uses: actions/upload-artifact@v3
+      name: Upload package and logs
       if: always()
       with:
         name: build-log
         path: |
           ./dotnetbuild.binlog
           dist
+
+    - name: Run tests (dotnet)
+      run: ./build dotnet:test --configuration Release --results data
+
+    - name: Report tests (dotnet)
+      uses: dorny/test-reporter@v1
+      if: ${{ always() }}  
+      with:
+        name: test
+        path: data/*.trx
+        reporter: dotnet-trx
