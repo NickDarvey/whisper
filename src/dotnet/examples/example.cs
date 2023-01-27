@@ -148,7 +148,7 @@ public class Program
     };
 
 
-    var context = whisper_init("C:\\Users\\nickd\\source\\repos\\whisper\\samples\\ggml-base.en.bin");
+    var context = whisper_init_from_file("C:\\Users\\nickd\\source\\repos\\whisper\\samples\\ggml-base.en.bin");
     var parameters = whisper_full_default_params(whisper_sampling_strategy.WHISPER_SAMPLING_GREEDY);
 
     parameters.print_realtime = true;

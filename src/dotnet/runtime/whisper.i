@@ -10,8 +10,9 @@
 
 // 22.4.2 Managed arrays using P/Invoke default array marshalling
 // https://www.swig.org/Doc4.0/SWIGDocumentation.html#CSharp_arrays
-%apply float INPUT[]  {float *samples, float *data}
+%apply float INPUT[]  {float *samples, float *data, float *lang_probs}
 %apply int INPUT[]  {int *tokens, int *prompt_tokens}
+%apply unsigned char INPUT[] {void *buffer}
 
 // whisper_context is forward-declared.
 // https://stackoverflow.com/a/10008434/1259408
@@ -32,6 +33,12 @@ struct whisper_context { };
 %ignore whisper_get_probs;
 %ignore prompt_tokens;
 %ignore prompt_n_tokens;
+%ignore whisper_get_logits;
+
+// TODO: Figure out how you're supposed to use `whisper_model_loader`
+// (which wants a `void * context`)
+%ignore whisper_init;
+%ignore whisper_model_loader;
 
 // Process symbols in header
 %include "../../ext/whisper.cpp/whisper.h"

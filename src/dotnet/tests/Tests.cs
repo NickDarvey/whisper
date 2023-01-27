@@ -7,7 +7,7 @@ public class UnitTest1
     [Fact]
     public void Test1()
     {
-        var ctx = whisper_init("for-tests-ggml-base.en.bin");
+        var ctx = whisper_init_from_file("for-tests-ggml-base.en.bin");
         var parameters = whisper_full_default_params(whisper_sampling_strategy.WHISPER_SAMPLING_GREEDY);
         parameters.print_realtime = true;
         parameters.print_progress = false;
