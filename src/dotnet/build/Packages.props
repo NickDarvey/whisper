@@ -4,7 +4,14 @@
     <PackageProjectUrl>https://github.com/nickdarvey/whisper</PackageProjectUrl>
     <RepositoryUrl>https://github.com/nickdarvey/whisper</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Description>High-performance inference of OpenAI's Whisper automatic speech recognition (ASR) model.</Description>
+    <Description>
+      High-performance inference of OpenAI's Whisper automatic speech recognition (ASR) model.
+      
+      This is a .NET wrapper around the native implementation of Whisper, [whisper.cpp](https://github.com/ggerganov/whisper.cpp), by Georgi Gerganov.
+
+      This package version, `P`, corresponds to whisper.cpp version, `W`, like `$"{W.Major}.{W.Minor}.{W.Revision * 1_000 + P.Increment}"`.
+    </Description>
+    <PackageTags>whisper;openai;speech to text</PackageTags>
     <PackageIcon>logo.png</PackageIcon>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <MinClientVersion>3.0</MinClientVersion>
@@ -12,7 +19,6 @@
     <DebugSymbols>true</DebugSymbols>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <VersionPrefix>0.0.0</VersionPrefix>
     <ContinuousIntegrationBuild Condition="$(Configuration) == 'Release'">true</ContinuousIntegrationBuild>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!--

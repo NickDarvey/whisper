@@ -334,6 +334,7 @@ module private Actions =
 
   module cpp =
     open Fake.Build
+    open System.Text.RegularExpressions
 
     let source = Path.root
     let out = source </> "out"
@@ -360,6 +361,21 @@ module private Actions =
             | X86 -> "win32"
             | X64 -> "x64"
         |}
+
+    let getVersion () =
+      System.IO.File.ReadLines (source </> "CMakeLists.txt")
+      |> Seq.choose (fun l ->
+        let result = Regex.Match(l, "add_subdirectory\(([\w\/\.]+)\)")
+        if result.Success then Some result.Groups[1].Value else None)
+      |> Seq.collect (fun dir -> System.IO.File.ReadLines (dir </> "CMakeLists.txt"))
+      |> Seq.choose (fun l ->
+        let result = Regex.Match(l, "project\(.+?VERSION (\d+)\.(\d+)\.(\d+)")
+        if result.Success then Some (result.Groups[1].Value, result.Groups[2].Value, result.Groups[3].Value) else None)
+      |> Seq.tryExactlyOne
+      |> function
+      | Some (major, minor, revision) ->
+        System.Int32.Parse major, System.Int32.Parse minor, System.Int32.Parse revision
+      | _ -> invalidOp $"Couldn't find a valid version number for whisper.cpp"
 
     let configure (targetPlatform : Platform) =
       let toolchain = getToolchain targetPlatform
@@ -437,6 +453,14 @@ module private Actions =
 
     let private dist configuration =
       Path.dist </> Configuration.toString configuration </> "dotnet"
+
+    let private getVersion () =
+      let incr = System.Int32.Parse <| File.readLine (relative </> "version")
+      let major, minor, revision = cpp.getVersion ()
+      // we put our own increments into revision space, so shift the whisper.cpp revision number to make room.
+      // (this means we can release 999 versions for every 1 whisper.cpp version.)
+      let revision = revision * 1_000 + incr
+      $"{major}.{minor}.{revision}"
 
     let clean () =
       File.deleteAll (
@@ -546,6 +570,10 @@ module private Actions =
               NoRestore = true
               NoBuild = true
               OutputPath = Some (dist configuration)
+              MSBuildParams = {
+                x.MSBuildParams with
+                  Properties = [ "Version", getVersion () ]
+              }
           })
         sln
 
