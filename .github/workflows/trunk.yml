@@ -35,4 +35,4 @@ jobs:
           dist
 
     - name: Publish
-      run: dotnet nuget push .\dist\Release\dotnet\*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
+      run: dotnet nuget push .\dist\Release\dotnet\*.nupkg --api-key ${{secrets.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --skip-duplicate

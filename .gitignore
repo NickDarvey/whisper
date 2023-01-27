@@ -16,3 +16,6 @@ paket-files/
 
 # Logging 
 **/*.binlog
+
+# Working folder
+data/
