@@ -498,7 +498,8 @@ module private Actions =
         GlobbingPattern.create (Path.root </> relative </> "**/*.g.*")
       )
 
-      let files = IO.Directory.CreateTempSubdirectory ()
+      let ifiles = [ runtime </> "whisper.i" ]
+      let generated = IO.Directory.CreateTempSubdirectory ()
 
       Swig.run
         {
@@ -510,23 +511,40 @@ module private Actions =
               |}
           EnableCppProcessing = true
           OutputFile = runtime </> cpp.dotnet.wrapperFileName
-          OutputDirectory = files.FullName
-          Input = Swig.InputFiles [ runtime </> "whisper.i" ]
+          OutputDirectory = generated.FullName
+          Input = Swig.InputFiles ifiles
         }
       |> CreateProcess.ensureExitCode
       |> Proc.run
       |> ignore
 
-      for file in files.EnumerateFiles () do
-        let target =
+      let generatedWithDestination =
+        generated.EnumerateFiles ()
+        |> Seq.map (fun file ->
+          file,
           file.FullName
-          |> Path.toRelativeFrom files.FullName
+          |> Path.toRelativeFrom generated.FullName
           |> Path.changeExtension $".g{file.Extension}"
-          |> Path.combine runtime
+          |> Path.combine runtime)
+        |> Seq.toList
+      
+      for generated, destination in generatedWithDestination do
+        generated.MoveTo destination
 
-        file.MoveTo target
+      let invalids =
+        generatedWithDestination
+        |> Seq.map snd
+        |> Seq.filter (fun dest -> dest.Contains "SWIGTYPE")
 
-      files.Delete true
+      if not <| Seq.isEmpty invalids then
+        invalidOp $"\
+          SWIG generation created invalid types:\n\
+          {String.toLines invalids}\n\n\
+          You need to update the SWIG files:\n\
+          {String.toLines ifiles}\n"
+      
+
+      generated.Delete true
 
     let build configuration =
       DotNet.build
