@@ -157,7 +157,7 @@ module private Tools =
 
     /// The requested version of MSVC
     [<Literal>]
-    let Version = "14.34"
+    let Version = "14.35"
 
     /// Gets the MSVC environment variables from [vcvarsall.bat](https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170#developer_command_file_locations).
     let vcvars hostArchitecture targetArchitecture =
