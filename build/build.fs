@@ -157,7 +157,7 @@ module private Tools =
 
     /// The requested version of MSVC
     [<Literal>]
-    let Version = "14.34"
+    let Version = "14.35"
 
     /// Gets the MSVC environment variables from [vcvarsall.bat](https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170#developer_command_file_locations).
     let vcvars hostArchitecture targetArchitecture =
@@ -183,10 +183,13 @@ module private Tools =
         | X86, X64 -> "x86_amd64"
 
       let parse (r : ProcessOutput) : Map<string, string> =
-        r.Output
-        |> String.splitStr Environment.NewLine
-        |> List.skipWhile (fun line ->
-          not <| line.StartsWith "[vcvarsall.bat] Environment initialized")
+        let envvars =
+          r.Output
+          |> String.splitStr Environment.NewLine
+          |> List.skipWhile (fun line ->
+            not <| line.StartsWith "[vcvarsall.bat] Environment initialized")
+        if envvars.IsEmpty then invalidOp $"Error fetching MSVC environment variables.\n{r.Output}"
+        envvars
         |> List.skip 1
         |> List.map (fun line -> line.Split '=')
         |> List.takeWhile (fun parts -> parts.Length = 2)

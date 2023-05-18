@@ -18,7 +18,7 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@v1
       with: 
         # must match build.fs
-        toolset: 14.34
+        toolset: 14.35
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
