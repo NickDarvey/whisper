@@ -31,4 +31,17 @@ public class UnitTest1
         whisper_print_timings(ctx);
         whisper_free(ctx);
     }
+
+    [Fact]
+    public void Tokenize()
+    {
+        var ctx = whisper_init_from_file("for-tests-ggml-base.en.bin");
+        var buffer = new int[1024];
+
+        var result = whisper_tokenize(ctx, "test text", buffer, buffer.Length);
+
+        Assert.InRange(result, 0, buffer.Length);
+
+        whisper_free(ctx);
+    }
 }
