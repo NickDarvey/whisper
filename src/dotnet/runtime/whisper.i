@@ -11,8 +11,15 @@
 // 22.4.2 Managed arrays using P/Invoke default array marshalling
 // https://www.swig.org/Doc4.0/SWIGDocumentation.html#CSharp_arrays
 %apply float INPUT[]  {float *samples, float *data, float *lang_probs}
-%apply int INPUT[]  {int *tokens, int *prompt_tokens}
 %apply unsigned char INPUT[] {void *buffer}
+
+// int[] as outputs
+%apply int OUTPUT[]  {int *tokens}
+int whisper_tokenize(struct whisper_context * ctx, const char * text, int * tokens, int n_max_tokens);
+%ignore whisper_tokenize;
+
+// int[] as inputs
+%apply int INPUT[]  {int *tokens, int *prompt_tokens}
 
 // whisper_context is forward-declared.
 // https://stackoverflow.com/a/10008434/1259408
