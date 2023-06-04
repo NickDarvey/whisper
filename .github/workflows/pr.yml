@@ -21,10 +21,9 @@ jobs:
         toolset: 14.35
 
     - name: Install CUDA Toolkit
-        id: cuda-toolkit
-        uses: Jimver/cuda-toolkit@v0.2.10
-        with:
-          cuda: '12.1.0'
+      uses: Jimver/cuda-toolkit@v0.2.10
+      with:
+        cuda: '12.1.0'
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
