@@ -391,6 +391,7 @@ module private Actions =
           $"-DCMAKE_TOOLCHAIN_FILE={Vcpkg.toolchain.Value}"
           $"-DVCPKG_TARGET_TRIPLET={Vcpkg.toTriplet targetPlatform}"
           $"-DWHISPER_SUPPORT_OPENBLAS=OFF"
+          $"-DWHISPER_CUBLAS=ON"
           $"-DDOTNET_WRAPPER_FILE_NAME={dotnet.wrapperFileName}"
           $"-DDOTNET_LIBRARY_NAME={dotnet.libraryName}"
         ]
