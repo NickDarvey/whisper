@@ -391,7 +391,9 @@ module private Actions =
           $"-DCMAKE_TOOLCHAIN_FILE={Vcpkg.toolchain.Value}"
           $"-DVCPKG_TARGET_TRIPLET={Vcpkg.toTriplet targetPlatform}"
           $"-DWHISPER_OPENBLAS=OFF"
-          $"-DWHISPER_CUBLAS=ON"
+          // TODO: Extract cublas as another property of `Platform` and disallow x86&cublas combo.
+          // Cuda is only supported on '(windows & x64 & !uwp) | (linux & x64) | (linux & arm64)'
+          if targetPlatform.Architecture = X64 then $"-DWHISPER_CUBLAS=ON"
           $"-DDOTNET_WRAPPER_FILE_NAME={dotnet.wrapperFileName}"
           $"-DDOTNET_LIBRARY_NAME={dotnet.libraryName}"
         ]
