@@ -157,7 +157,7 @@ module private Tools =
 
     /// The requested version of MSVC
     [<Literal>]
-    let Version = "14.35"
+    let Version = "14.36"
 
     /// Gets the MSVC environment variables from [vcvarsall.bat](https://learn.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=msvc-170#developer_command_file_locations).
     let vcvars hostArchitecture targetArchitecture =
@@ -390,7 +390,10 @@ module private Actions =
           $"-DCMAKE_CONFIGURATION_TYPES={String.Join (';', Configuration.all |> Seq.map Configuration.toString)}"
           $"-DCMAKE_TOOLCHAIN_FILE={Vcpkg.toolchain.Value}"
           $"-DVCPKG_TARGET_TRIPLET={Vcpkg.toTriplet targetPlatform}"
-          $"-DWHISPER_SUPPORT_OPENBLAS=OFF"
+          $"-DWHISPER_OPENBLAS=OFF"
+          // TODO: Extract cublas as another property of `Platform` and disallow x86&cublas combo.
+          // Cuda is only supported on '(windows & x64 & !uwp) | (linux & x64) | (linux & arm64)'
+          if targetPlatform.Architecture = X64 then $"-DWHISPER_CUBLAS=ON"
           $"-DDOTNET_WRAPPER_FILE_NAME={dotnet.wrapperFileName}"
           $"-DDOTNET_LIBRARY_NAME={dotnet.libraryName}"
         ]
