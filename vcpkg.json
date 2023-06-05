@@ -2,6 +2,9 @@
   "name": "whisper",
   "version-string": "1.0.0",
   "dependencies": [
-    "cuda"
+    {
+      "name": "cuda",
+      "platform": "(windows & x64 & !uwp) | (linux & x64) | (linux & arm64)"
+    }
   ]
 }
